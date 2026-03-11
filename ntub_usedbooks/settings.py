@@ -27,7 +27,8 @@ SECRET_KEY = 'django-insecure-sscy2ltfn4z&hsq3)5==pqi6w$t2-9j#36jqr$=r20!e4jax46
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# add 'test.ntubook.com' and 'ntubook.com' to ALLOWED_HOSTS edit @X!aN
+ALLOWED_HOSTS = ['test.ntubook.com', 'ntubook.com', '35.212.218.80']
 
 
 # Application definition
@@ -53,11 +54,10 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'ntub_usedbooks.urls'
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'], # Teams html edit @X!aN
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
