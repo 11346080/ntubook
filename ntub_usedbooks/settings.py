@@ -39,6 +39,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
+    'core',
+    'accounts',
+    'books',
+    'listings',
+    'requests',
+    'reports',
+    'notifications',
 ]
 
 MIDDLEWARE = [
@@ -132,3 +140,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# 自訂使用者模型
+AUTH_USER_MODEL = 'accounts.CustomUser'
