@@ -1,7 +1,7 @@
 # 北商傳書 (NTUB Used Books)
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Django](https://img.shields.io/badge/Django-5.x-green.svg)](https://www.djangoproject.com/)
+[![Django](https://img.shields.io/badge/Django-5.2.7-green.svg)](https://www.djangoproject.com/)
 [![MariaDB](https://img.shields.io/badge/MariaDB-10.11-orange.svg)](https://mariadb.org/)
 
 北商傳書是一款專為臺北商業大學校內師生設計的二手課本交易平台，旨在解決傳統二手書交易中資訊不透明、買賣雙方缺乏信任基礎以及交易流程繁瑣等問題。
@@ -44,7 +44,7 @@
 |------|------|------|
 | **前端** | HTML5 / Bootstrap 5 | 響應式網頁介面，採用 Bootstrap Grid 系統與元件庫建構各頁面 |
 | **前端互動** | JavaScript (原生) | DOM 操作、AJAX 非同步請求、表單驗證 |
-| **後端框架** | Django 5.x (MTV 架構) | Model-Template-View 設計模式，依業務功能拆分為 accounts、books、listings、requests、reports、notifications、core 等 App |
+| **後端框架** | Django 5.2.7 (MTV 架構) | Model-Template-View 設計模式，依業務功能拆分為 accounts、books、listings、requests、reports、notifications、core 等 App |
 | **認證機制** | Django Allauth + Google OAuth 2.0 | 校內帳號 OAuth 登入，整合 Cloudflare Turnstile 與 Google reCAPTCHA v3 進行人機驗證與風險評分 |
 | **表單處理** | Django Forms / ModelForms | 伺服器端表單驗證，確保資料正確性 |
 | **後台管理** | Django Admin | 初期快速建置後台管理介面，後續視需求擴充自建儀表板 |
@@ -79,7 +79,7 @@ ntub-usedbooks/
 ### 環境需求
 
 - Python 3.10+
-- Django 5.x
+- Django 5.2.7
 - MariaDB 10.11 LTS
 - Node.js (可選，用於靜態資產管理)
 
