@@ -1,3 +1,6 @@
 from django.contrib import admin
+from .models import ProgramType, Department, ClassGroup
 
-# Register your models here.
+admin.site.register(ProgramType)
+admin.site.register(Department)
+admin.site.register(ClassGroup)
