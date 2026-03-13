@@ -30,6 +30,13 @@ DEBUG = True
 # add 'test.ntubook.com' and 'ntubook.com' to ALLOWED_HOSTS edit @X!aN
 ALLOWED_HOSTS = ['test.ntubook.com', 'ntubook.com', '35.212.218.80']
 
+# CSRF token @X!aN
+CSRF_TRUSTED_ORIGINS = [
+    'https://test.ntubook.com',
+    'https://ntubook.com',
+]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Application definition
 
