@@ -71,7 +71,7 @@ ROOT_URLCONF = 'ntub_usedbooks.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'ntub_usedbooks' / 'templates'], # Teams html edit @X!aN
+        'DIRS': [BASE_DIR / 'templates'], # Teams html edit @X!aN
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
