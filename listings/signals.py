@@ -61,13 +61,13 @@ def auto_create_book_applicability(sender, instance, created, **kwargs):
     當「刊登」建立時，自動補入「書籍適用班級」資料。
     """
     # 只有在新建刊登，且有填寫班級、學年、學期資訊時才執行
-    if created and instance.class_group and instance.academic_year and instance.term:
+    if created and instance.origin_class_group and instance.origin_academic_year and instance.origin_term:
         # 使用 update_or_create 確保唯一性 (book, academic_year, term, class_group)
         BookApplicability.objects.update_or_create(
             book=instance.book,
-            academic_year=instance.academic_year,
-            term=instance.term,
-            class_group=instance.class_group,
+            academic_year=instance.origin_academic_year,
+            term=instance.origin_term,
+            class_group=instance.origin_class_group,
             defaults={
                 'source_type': 'FROM_LISTING', # 標記來源
                 'source_listing_id': instance.id
