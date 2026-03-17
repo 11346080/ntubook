@@ -27,3 +27,47 @@ def notify_user_on_moderation(sender, instance, created, **kwargs):
         if report.status != 'RESOLVED':
             report.status = 'RESOLVED'
             report.save()
+            
+@receiver(post_save, sender=ModerationAction)
+def auto_execute_penalty(sender, instance, created, **kwargs):
+    """
+    當管理員對檢舉做出處置時，自動執行對應動作：
+    例如：若處置包含「下架內容」，則自動找到該檢舉關聯的刊登並下架。
+    """
+    if created:
+        report = instance.report
+        # 假設處置註解中有關鍵字或你有一個 action_type 欄位
+        # 這裡示範：如果 report 關聯的是某個 Listing
+        if report.content_type.model == 'listing' and "下架" in instance.note:
+            listing = report.content_object
+            listing.status = 'OFF_SHELF'
+            listing.save()
+            
+@receiver(post_save, sender=ModerationAction)
+def sync_report_and_notify_user(sender, instance, created, **kwargs):
+    """
+    當建立處置後，自動更新檢舉案件狀態並通知相關人員。
+    """
+    if created and instance.report:
+        report = instance.report
+        
+        # 1. 更新檢舉單狀態為「已解決 (RESOLVED)」
+        if report.status != 'RESOLVED':
+            report.status = 'RESOLVED'
+            report.save()
+            
+        # 2. 自動通知「被檢舉人」 (假設 Report 模型有關聯被檢舉人 suspect_user)
+        # 這裡根據你的模型欄位調整，若 report 有 suspect_user 欄位：
+        suspect = getattr(report, 'suspect_user', None)
+        
+        if suspect:
+            Notification.objects.create(
+                user=suspect,
+                type_code='WARNING',
+                title='系統審核處置通知',
+                message=(
+                    f"您好，關於案件號 #{report.id} 的檢舉已有審核結果。\n"
+                    f"處置動作：{instance.action_type}\n"
+                    f"管理員說明：{instance.note or '無'}"
+                )
+            )

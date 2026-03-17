@@ -34,3 +34,13 @@ def suspend_user_listings(sender, instance, **kwargs):
             seller=instance, 
             status='AVAILABLE'
         ).update(status='OFF_SHELF')
+        
+from django.db.models.signals import post_save, pre_delete # 修改 import
+
+@receiver(pre_delete, sender=CustomUser)
+def notify_admin_on_user_delete(sender, instance, **kwargs):
+    """
+    當使用者帳號即將被刪除前，可以進行最後的清理或紀錄。
+    """
+    print(f"警告：使用者 {instance.username} 正在被刪除。")
+    # 這裡可以寫入日誌或清理該使用者的私有上傳檔案
