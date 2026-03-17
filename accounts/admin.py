@@ -2,6 +2,11 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from .models import CustomUser, UserProfile
 
+# Admin Site 標題客製化
+admin.site.title = '北商傳書 後台管理'
+admin.site.header = '北商傳書 管理系統'
+admin.site.index_title = '系統管理'
+
 # 將 Profile 嵌進 User 的編輯頁面中
 class UserProfileInline(admin.StackedInline):
     model = UserProfile
@@ -24,7 +29,8 @@ class CustomUserAdmin(UserAdmin):
     list_display = ('username', 'email', 'is_staff', 'account_status')
     list_filter = ('account_status', 'is_staff', 'is_active')
     search_fields = ('username', 'email')
-    actions = ['make_suspended', 'make_active']
+    ordering = ('-date_joined',)
+    actions = ['make_suspended', 'make_active', 'export_as_csv']
     
     # def get_queryset(self, request):
     #     return super().get_queryset(request).prefetch_related('userprofile__department')
@@ -43,3 +49,15 @@ class CustomUserAdmin(UserAdmin):
     def make_active(self, request, queryset):
         updated = queryset.update(account_status='ACTIVE')
         self.message_user(request, f'成功將 {updated} 名使用者設為啟用。')
+
+    @admin.action(description='匯出為 CSV')
+    def export_as_csv(self, request, queryset):
+        import csv
+        from django.http import HttpResponse
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="users.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['username', 'email', 'is_staff', 'account_status', 'date_joined'])
+        for obj in queryset:
+            writer.writerow([obj.username, obj.email, obj.is_staff, obj.account_status, obj.date_joined])
+        return response

@@ -11,6 +11,7 @@ class ReportAdmin(admin.ModelAdmin):
     list_filter = ('status', 'target_type', 'reason_code')
     search_fields = ('reporter__username', 'detail')
     inlines = [ModerationActionInline]
+    ordering = ('-created_at',)
     actions = ['mark_as_resolved', 'mark_as_dismissed']
 
     @admin.action(description='批次標記為「已解決」')

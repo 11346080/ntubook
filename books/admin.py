@@ -9,5 +9,6 @@ class BookApplicabilityInline(admin.TabularInline):
 class BookAdmin(admin.ModelAdmin):
     list_display = ('title', 'author_display', 'isbn13', 'publisher')
     search_fields = ('title', 'author_display', 'isbn13', 'isbn10')
-    inlines = [BookApplicabilityInline] # 可以在編輯書本時，直接新增適用課程
+    ordering = ('title',)
+    inlines = [BookApplicabilityInline]
 

@@ -12,7 +12,8 @@ class ListingAdmin(admin.ModelAdmin):
     list_filter = ('status', 'condition_level', 'origin_term')
     search_fields = ('book__title', 'seller__username', 'seller__profile__display_name')
     inlines = [ListingImageInline]
-    actions = ['make_off_shelf']
+    ordering = ('-created_at',)
+    actions = ['make_off_shelf', 'export_as_csv']
     
     # 編輯頁面的表單區塊分組
     fieldsets = (
@@ -36,6 +37,18 @@ class ListingAdmin(admin.ModelAdmin):
         # 這裡也可以透過 signal 連動下架時間
         updated = queryset.update(status='OFF_SHELF')
         self.message_user(request, f'成功將 {updated} 筆刊登強制下架。')
+
+    @admin.action(description='匯出為 CSV')
+    def export_as_csv(self, request, queryset):
+        import csv
+        from django.http import HttpResponse
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="listings.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['id', 'book_title', 'seller', 'used_price', 'condition_level', 'status', 'created_at'])
+        for obj in queryset:
+            writer.writerow([obj.id, obj.book.title, obj.seller.username, obj.used_price, obj.condition_level, obj.status, obj.created_at])
+        return response
 
 @admin.register(BookFavorite)
 class BookFavoriteAdmin(admin.ModelAdmin):

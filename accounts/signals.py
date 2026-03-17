@@ -29,10 +29,10 @@ def suspend_user_listings(sender, instance, **kwargs):
         # 為了避免 Circular Import (循環匯入) 的錯誤，我們在函式內部再 import Listing
         from listings.models import Listing
         
-        # 找出這個賣家所有「上架中」(AVAILABLE) 的書，一次性批次更新為「下架」(OFF_SHELF)
+        # 找出這個賣家所有「上架中」(PUBLISHED) 的書，一次性批次更新為「下架」(OFF_SHELF)
         Listing.objects.filter(
-            seller=instance, 
-            status='AVAILABLE'
+            seller=instance,
+            status='PUBLISHED'
         ).update(status='OFF_SHELF')
         
 from django.db.models.signals import post_save, pre_delete # 修改 import
