@@ -25,10 +25,18 @@ load_dotenv()
 SECRET_KEY = 'django-insecure-sscy2ltfn4z&hsq3)5==pqi6w$t2-9j#36jqr$=r20!e4jax46'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = []
+# add 'test.ntubook.com' and 'ntubook.com' to ALLOWED_HOSTS edit @X!aN
+ALLOWED_HOSTS = ['test.ntubook.com', 'ntubook.com', '35.212.218.80', '127.0.0.1', 'localhost']
 
+# CSRF token @X!aN
+CSRF_TRUSTED_ORIGINS = [
+    'https://test.ntubook.com',
+    'https://ntubook.com',
+]
+
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Application definition
 
@@ -39,6 +47,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    
+    'core',
+    'accounts',
+    'books',
+    'listings',
+    'requests',
+    'reports',
+    'notifications',
 ]
 
 MIDDLEWARE = [
@@ -52,11 +68,10 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = 'ntub_usedbooks.urls'
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'], # Teams html edit @X!aN
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -132,3 +147,6 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# 自訂使用者模型
+AUTH_USER_MODEL = 'accounts.CustomUser'
