@@ -56,24 +56,6 @@ class ListingImage(models.Model):
         verbose_name_plural = '2. 刊登圖片'
         ordering = ['sort_order', '-is_primary']
 
-class PurchaseRequest(models.Model):
-    STATUS_CHOICES = [
-        ('PENDING', '待處理'), ('ACCEPTED', '已接受'), ('REJECTED', '已拒絕'),
-        ('CANCELLED_BY_BUYER', '買家取消'), ('CANCELLED_BY_SELLER', '賣家取消'),
-        ('EXPIRED', '已過期'),
-    ]
-    listing = models.ForeignKey(Listing, on_delete=models.CASCADE, related_name='purchase_requests', verbose_name='刊登商品')
-    buyer = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='purchase_requests', verbose_name='買家')
-    status = models.CharField('請求狀態', max_length=20, choices=STATUS_CHOICES, default='PENDING')
-    buyer_message = models.TextField('買家留言', blank=True)
-    risk_score = models.DecimalField('風險分數', max_digits=5, decimal_places=2, null=True, blank=True)
-    expires_at = models.DateTimeField('過期時間', null=True, blank=True)
-    created_at = models.DateTimeField('建立時間', auto_now_add=True)
-    responded_at = models.DateTimeField('回應時間', null=True, blank=True)
-
-    class Meta:
-        verbose_name = '預約請求'
-        verbose_name_plural = '3. 預約請求'
         
 class BookFavorite(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='favorites', verbose_name='使用者')
@@ -82,5 +64,5 @@ class BookFavorite(models.Model):
 
     class Meta:
         verbose_name = '書籍收藏'
-        verbose_name_plural = '4. 書籍收藏'
+        verbose_name_plural = '3. 書籍收藏'
         unique_together = ('user', 'book')

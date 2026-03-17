@@ -21,8 +21,8 @@ class Department(models.Model):
         verbose_name_plural = '2. 系所'
 
     def __str__(self):
-        return f"{self.program_type.name_zh} - {self.name_zh}"
-
+        return self.name_zh
+    
 class ClassGroup(models.Model):
     department = models.ForeignKey(Department, on_delete=models.CASCADE, verbose_name='所屬系所')
     code = models.CharField('班級代碼', max_length=20, unique=True)
@@ -33,4 +33,4 @@ class ClassGroup(models.Model):
         verbose_name_plural = '3. 班級群組'
 
     def __str__(self):
-        return f"{self.department.name_zh} - {self.name_zh}"
+        return self.name_zh

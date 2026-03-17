@@ -7,6 +7,16 @@ class UserProfileInline(admin.StackedInline):
     model = UserProfile
     can_delete = False
     verbose_name_plural = '詳細個人資料'
+    
+    # 修正 1：確保這裡有 autocomplete
+    autocomplete_fields = ['department'] 
+
+    # 修正 2：直接覆寫查詢邏輯，強迫它只抓必要的資料
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('department')
+    
+class UserProfileAdmin(admin.ModelAdmin):
+    autocomplete_fields = ['department'] # 把它變成搜尋選單
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
@@ -15,6 +25,9 @@ class CustomUserAdmin(UserAdmin):
     list_filter = ('account_status', 'is_staff', 'is_active')
     search_fields = ('username', 'email')
     actions = ['make_suspended', 'make_active']
+    
+    # def get_queryset(self, request):
+    #     return super().get_queryset(request).prefetch_related('userprofile__department')
 
     # 表單分組設定
     fieldsets = UserAdmin.fieldsets + (
