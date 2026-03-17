@@ -25,7 +25,7 @@ load_dotenv()
 SECRET_KEY = 'django-insecure-sscy2ltfn4z&hsq3)5==pqi6w$t2-9j#36jqr$=r20!e4jax46'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 # add 'test.ntubook.com' and 'ntubook.com' to ALLOWED_HOSTS edit @X!aN
 ALLOWED_HOSTS = ['test.ntubook.com', 'ntubook.com', '35.212.218.80', '127.0.0.1', 'localhost']
