@@ -13,6 +13,7 @@ class ListingAdmin(admin.ModelAdmin):
     search_fields = ('book__title', 'seller__username', 'seller__profile__display_name')
     inlines = [ListingImageInline]
     ordering = ('-created_at',)
+    list_per_page = 25
     actions = ['make_off_shelf', 'export_as_csv']
     
     # 編輯頁面的表單區塊分組

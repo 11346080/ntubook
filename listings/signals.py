@@ -10,12 +10,12 @@ def auto_create_book_applicability(sender, instance, created, **kwargs):
     當「刊登」建立時，自動補入「書籍適用班級」資料。
     """
     if created and instance.origin_class_group:
+        # 從 Listing 的現有欄位組出 course_name
+        course_name = f"{instance.origin_academic_year}學年度第{instance.origin_term}學期 {instance.origin_class_group.name_zh}"
         BookApplicability.objects.update_or_create(
             book=instance.book,
             class_group=instance.origin_class_group,
             defaults={
-                # 如果模型裡沒有 academic_year，就不要傳入
-                # 如果你想紀錄課程名稱，可以嘗試加入：
-                # 'course_name': f"{instance.origin_academic_year}-{instance.origin_term} 課程",
+                'course_name': course_name,
             }
         )
