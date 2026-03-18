@@ -1,5 +1,6 @@
 from django.db import models
 from core.models import ClassGroup
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class Book(models.Model):
     isbn13 = models.CharField('ISBN-13', max_length=13, unique=True)
@@ -7,7 +8,14 @@ class Book(models.Model):
     title = models.CharField('書名', max_length=255)
     author_display = models.CharField('作者', max_length=255)
     publisher = models.CharField('出版社', max_length=255)
-    publication_date = models.CharField('出版日期', max_length=50, blank=True, null=True) # 使用字串保留格式彈性
+    publication_year = models.PositiveSmallIntegerField(
+    '出版年份',
+    validators=[
+        MinValueValidator(1900, message="請輸入西元年（1900以上）"),
+        MaxValueValidator(2100)
+    ],
+    blank=True, null=True
+)
     edition = models.CharField('版本', max_length=50, blank=True, null=True)
     cover_image_url = models.URLField('封面圖片連結', blank=True, null=True)
 

@@ -34,7 +34,7 @@ class BookApplicabilityInline(admin.TabularInline):
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
     form = BookAdminForm
-    list_display = ('title', 'author_display', 'isbn13', 'publisher')
+    list_display = ('title', 'author_display', 'isbn13', 'publication_year')
     search_fields = ('title', 'author_display', 'isbn13', 'isbn10')
     list_filter = ('publisher',)
     ordering = ('title',)
@@ -47,7 +47,7 @@ class BookAdmin(admin.ModelAdmin):
             'fields': ('isbn13', 'isbn10', 'title', 'author_display')
         }),
         ('出版資訊', {
-            'fields': ('publisher', 'publication_date', 'edition')
+            'fields': ('publisher', 'publication_year', 'edition')
         }),
         ('其他資訊', {
             'fields': ('cover_image_url',),
@@ -64,7 +64,7 @@ class BookAdmin(admin.ModelAdmin):
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="books.csv"'
         writer = csv.writer(response)
-        writer.writerow(['isbn13', 'isbn10', 'title', 'author_display', 'publisher', 'publication_date', 'edition'])
+        writer.writerow(['isbn13', 'isbn10', 'title', 'author_display', 'publisher', 'publication_year', 'edition'])
         for obj in queryset:
-            writer.writerow([obj.isbn13, obj.isbn10, obj.title, obj.author_display, obj.publisher, obj.publication_date, obj.edition])
+            writer.writerow([obj.isbn13, obj.isbn10, obj.title, obj.author_display, obj.publisher, obj.publication_year, obj.edition])
         return response
