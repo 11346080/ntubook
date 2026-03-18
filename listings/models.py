@@ -59,6 +59,14 @@ class Listing(models.Model):
         verbose_name='刊登狀態'
     )
     off_shelf_reason = models.CharField(max_length=255, blank=True, null=True, verbose_name='下架原因')
+    accepted_request = models.ForeignKey(
+        'purchase_requests.PurchaseRequest',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name='accepted_listing',
+        verbose_name='已接受請求'
+    )
     risk_score = models.DecimalField(
         max_digits=3,
         decimal_places=2,
