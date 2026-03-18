@@ -44,13 +44,15 @@
             {% endif %}
         </table>
 
-        {% if book.applicabilities.all %}
+        {% if applicabilities %}
         <h4 class="mt-4">適用課程</h4>
         <ul class="list-group mt-2">
-            {% for app in book.applicabilities.all %}
+            {% for app in applicabilities %}
             <li class="list-group-item">
-                <strong>{{ app.class_group.name }}</strong> - {{ app.course_name }}
+                {% if app.class_group %}{{ app.class_group.name_zh }}{% endif %} - {{ app.course_name }}
             </li>
+            {% empty %}
+            <li class="list-group-item text-muted">無適用課程資料</li>
             {% endfor %}
         </ul>
         {% endif %}
