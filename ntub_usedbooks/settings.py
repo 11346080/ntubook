@@ -165,3 +165,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # 自訂使用者模型
 AUTH_USER_MODEL = 'accounts.CustomUser'
+
+# Auth 登入導向設定
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
