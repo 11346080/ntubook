@@ -1,0 +1,284 @@
+<!-- 共用 Modal 隱藏元件 -->
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/modals.css') }}">
+
+<!-- Modal 1: 送出預約請求 -->
+<div class="modal fade" id="reserveModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border: none; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+            <!-- Modal Header -->
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--primary-color) 0%, #0D1F3C 100%); color: white; border: none; border-radius: 12px 12px 0 0;">
+                <h5 class="modal-title" style="font-weight: 700;">
+                    <i class="fas fa-inbox"></i> 發送預約請求
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body" style="padding: 2rem;">
+                <!-- 書籍資訊摘要 -->
+                <div style="background-color: var(--bg-light); border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem; border-left: 4px solid var(--accent-color);">
+                    <h6 style="color: var(--primary-color); font-weight: 700; margin-bottom: 0.75rem;">
+                        <i class="fas fa-book"></i> 書籍資訊
+                    </h6>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 0.95rem;">
+                        <div>
+                            <strong>書名：</strong><br>
+                            Python 從入門到精通
+                        </div>
+                        <div>
+                            <strong>售價：</strong><br>
+                            <span style="color: var(--accent-color); font-weight: 700; font-size: 1.2rem;">NT$450</span>
+                        </div>
+                        <div>
+                            <strong>賣家：</strong><br>
+                            林小美
+                        </div>
+                        <div>
+                            <strong>書況：</strong><br>
+                            <span style="background-color: rgba(16, 185, 129, 0.2); color: var(--success-color); padding: 0.2rem 0.6rem; border-radius: 3px;">全新</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 留言表單 -->
+                <form id="reserveForm">
+                    <div class="mb-3">
+                        <label for="buyer_message" class="form-label" style="font-weight: 600; color: var(--text-primary);">
+                            給賣家的留言
+                        </label>
+                        <textarea class="form-control" id="buyer_message" name="buyer_message" rows="5" 
+                                  placeholder="你可以在這裡跟賣家溝通...例如：詢問書籍狀況、約時間見面等。" 
+                                  style="border-radius: 6px; border: 1px solid var(--border-light); font-family: 'Noto Sans TC', sans-serif;"
+                                  required></textarea>
+                        <small class="form-text text-muted" style="display: block; margin-top: 0.5rem;">
+                            <i class="fas fa-info-circle"></i> 禮貌且詳細的留言可以提高成交機率
+                        </small>
+                    </div>
+
+                    <div style="background-color: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 6px; padding: 1rem; margin-bottom: 1.5rem;">
+                        <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">
+                            <i class="fas fa-shield-alt" style="color: var(--danger-color); margin-right: 0.5rem;"></i>
+                            <strong>安全提示：</strong>請勿在線上匯款，建議面交驗貨後再付款。
+                        </p>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button type="button" class="btn btn-outline-primary flex-grow-1" data-bs-dismiss="modal">
+                            <i class="fas fa-times"></i> 取消
+                        </button>
+                        <button type="submit" class="btn btn-accent flex-grow-1">
+                            <i class="fas fa-paper-plane"></i> 發送預約
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 2: 檢舉書籍或賣家 -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border: none; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+            <!-- Modal Header -->
+            <div class="modal-header" style="background-color: var(--danger-color); color: white; border: none; border-radius: 12px 12px 0 0;">
+                <h5 class="modal-title" style="font-weight: 700;">
+                    <i class="fas fa-flag"></i> 檢舉內容
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body" style="padding: 2rem;">
+                <form id="reportForm">
+                    <!-- 檢舉原因 -->
+                    <div class="mb-3">
+                        <label for="reason_code" class="form-label" style="font-weight: 600; color: var(--text-primary);">
+                            檢舉原因 *
+                        </label>
+                        <select class="form-control" id="reason_code" name="reason_code" 
+                                style="border-radius: 6px; border: 1px solid var(--border-light); font-family: 'Noto Sans TC', sans-serif;"
+                                required>
+                            <option value="">-- 請選擇檢舉原因 --</option>
+                            <option value="inappropriate_content">內容不當</option>
+                            <option value="fake_product">盜版/假書</option>
+                            <option value="misleading_info">誤導性資訊</option>
+                            <option value="scam">詐騙疑慮</option>
+                            <option value="spam">垃圾訊息</option>
+                            <option value="violation">違反平台規則</option>
+                            <option value="other">其他</option>
+                        </select>
+                    </div>
+
+                    <!-- 詳細說明 -->
+                    <div class="mb-3">
+                        <label for="detail" class="form-label" style="font-weight: 600; color: var(--text-primary);">
+                            詳細說明 *
+                        </label>
+                        <textarea class="form-control" id="detail" name="detail" rows="5" 
+                                  placeholder="請盡可能詳細地描述問題，包括具體的時間、地點或事件。我們會認真審視你的檢舉。" 
+                                  style="border-radius: 6px; border: 1px solid var(--border-light); font-family: 'Noto Sans TC', sans-serif;"
+                                  required></textarea>
+                        <small class="form-text text-muted" style="display: block; margin-top: 0.5rem;">
+                            <i class="fas fa-info-circle"></i> 詳細的檢舉能幫助我們更快地處理問題
+                        </small>
+                    </div>
+
+                    <div style="background-color: rgba(100, 116, 139, 0.05); border: 1px solid rgba(100, 116, 139, 0.2); border-radius: 6px; padding: 1rem; margin-bottom: 1.5rem;">
+                        <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">
+                            <i class="fas fa-lock" style="color: var(--primary-color); margin-right: 0.5rem;"></i>
+                            <strong>隱私通知：</strong>你的檢舉者身份將被保密。
+                        </p>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button type="button" class="btn btn-outline-primary flex-grow-1" data-bs-dismiss="modal">
+                            <i class="fas fa-times"></i> 取消
+                        </button>
+                        <button type="submit" class="btn btn-danger flex-grow-1">
+                            <i class="fas fa-paper-plane"></i> 提交檢舉
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 3: 下架/刪除確認 -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border: none; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+            <!-- Modal Header -->
+            <div class="modal-header" style="background-color: var(--danger-color); color: white; border: none; border-radius: 12px 12px 0 0;">
+                <h5 class="modal-title" style="font-weight: 700;">
+                    <i class="fas fa-exclamation-triangle"></i> 確認下架
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body" style="padding: 2rem;">
+                <div style="text-align: center; margin-bottom: 2rem;">
+                    <div style="font-size: 3rem; color: var(--danger-color); margin-bottom: 1rem;">
+                        <i class="fas fa-question-circle"></i>
+                    </div>
+                    <h6 style="color: var(--text-primary); font-weight: 700; margin-bottom: 0.75rem;">
+                        你確定要下架這本書籍嗎？
+                    </h6>
+                    <p style="color: var(--text-secondary); margin: 0;">
+                        下架後，此書籍將從平台上移除，所有進行中的預約也會被取消。
+                    </p>
+                </div>
+
+                <div style="background-color: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 6px; padding: 1rem; margin-bottom: 1.5rem;">
+                    <p style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">
+                        <i class="fas fa-info-circle" style="color: var(--danger-color); margin-right: 0.5rem;"></i>
+                        <strong>書籍資訊：</strong><br>
+                        Python 從入門到精通 | NT$450 | 全新
+                    </p>
+                </div>
+
+                <!-- Modal Footer -->
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button type="button" class="btn btn-outline-primary flex-grow-1" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> 保留
+                    </button>
+                    <button type="button" class="btn btn-danger flex-grow-1" onclick="confirmDelete()">
+                        <i class="fas fa-trash"></i> 確認下架
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 4: 拒絕預約 -->
+<div class="modal fade" id="rejectModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border: none; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+            <!-- Modal Header -->
+            <div class="modal-header" style="background-color: var(--warning-color); color: white; border: none; border-radius: 12px 12px 0 0;">
+                <h5 class="modal-title" style="font-weight: 700;">
+                    <i class="fas fa-times-circle"></i> 拒絕預約
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body" style="padding: 2rem;">
+                <form id="rejectForm">
+                    <h6 style="color: var(--text-primary); font-weight: 700; margin-bottom: 1rem;">
+                        你確定要拒絕此預約嗎？
+                    </h6>
+                    <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                        買家：黃煜琨 | 書籍：深入淺出 設計模式
+                    </p>
+
+                    <div class="mb-3">
+                        <label for="reject_reason" class="form-label" style="font-weight: 600; color: var(--text-primary);">
+                            拒絕原因（可選）
+                        </label>
+                        <textarea class="form-control" id="reject_reason" name="reject_reason" rows="3" 
+                                  placeholder="告訴買家為什麼拒絕（會顯示給買家）..." 
+                                  style="border-radius: 6px; border: 1px solid var(--border-light); font-family: 'Noto Sans TC', sans-serif;"></textarea>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button type="button" class="btn btn-outline-primary flex-grow-1" data-bs-dismiss="modal">
+                            <i class="fas fa-times"></i> 保留預約
+                        </button>
+                        <button type="submit" class="btn" style="background-color: var(--warning-color); color: white; flex-grow-1;">
+                            <i class="fas fa-times-circle"></i> 拒絕預約
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal 5: 移除收藏確認 -->
+<div class="modal fade" id="removeFromFavoritesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border: none; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);">
+            <!-- Modal Header -->
+            <div class="modal-header" style="background-color: var(--primary-color); color: white; border: none; border-radius: 12px 12px 0 0;">
+                <h5 class="modal-title" style="font-weight: 700;">
+                    <i class="fas fa-heart-broken"></i> 移除收藏
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body" style="padding: 2rem; text-align: center;">
+                <div style="font-size: 2.5rem; color: var(--accent-color); margin-bottom: 1rem;">
+                    <i class="fas fa-heart"></i>
+                </div>
+                <h6 style="color: var(--text-primary); font-weight: 700; margin-bottom: 0.75rem;">
+                    確定要移除收藏嗎？
+                </h6>
+                <p style="color: var(--text-secondary); margin-bottom: 1.5rem;">
+                    資料結構與演算法
+                </p>
+
+                <!-- Modal Footer -->
+                <div style="display: flex; gap: 1rem;">
+                    <button type="button" class="btn btn-outline-primary flex-grow-1" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> 保留收藏
+                    </button>
+                    <button type="button" class="btn btn-accent flex-grow-1" onclick="removeFavorite()">
+                        <i class="fas fa-check"></i> 確認移除
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript 函數 -->
+<script src="{{ url_for('static', filename='js/modals.js') }}"></script>
