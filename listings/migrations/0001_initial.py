@@ -89,6 +89,6 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name='listingimage',
-            index=models.Index(fields=['listing', 'is_primary'], name='listing_img_listing_primary_idx'),
+            index=models.Index(fields=['listing', 'is_primary'], name='listing_img_primary_idx'),
         ),
     ]

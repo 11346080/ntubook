@@ -118,7 +118,7 @@ class ListingImage(models.Model):
         ordering = ['listing', 'sort_order']
         indexes = [
             models.Index(fields=['listing', 'sort_order'], name='listing_img_listing_sort_idx'),
-            models.Index(fields=['listing', 'is_primary'], name='listing_img_listing_primary_idx'),
+            models.Index(fields=['listing', 'is_primary'], name='listing_img_primary_idx'),
         ]
 
     def __str__(self):
