@@ -11,33 +11,35 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: SSH to GCP VM and Deploy
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.GCP_IP }}
           username: ${{ secrets.GCP_USER }}
           key: ${{ secrets.GCP_SSH_KEY }}
+          port: 22
+          debug: true
+          script_stop: true
           script: |
-            # 1. 判斷是哪個分支被 push，來決定要去哪個資料夾
+            whoami
+            echo $HOME
+            hostname
+      
             if [ "${{ github.ref_name }}" = "main" ]; then
               TARGET_DIR="/var/www/ntubook"
             elif [ "${{ github.ref_name }}" = "dev" ]; then
               TARGET_DIR="/var/www/ntubook_dev"
+            else
+              echo "Unsupported branch: ${{ github.ref_name }}"
+              exit 1
             fi
-            
+      
             echo "準備部署分支: ${{ github.ref_name }} 到路徑: $TARGET_DIR"
-            cd $TARGET_DIR
-            
-            # 2. 抓取最新程式碼並強制覆蓋
-            git fetch origin ${{ github.ref_name }}
-            git reset --hard origin/${{ github.ref_name }}
-            
-            # 3. 啟動虛擬環境 (如果有需要安裝新套件或更新資料庫 下面兩行取消註解就可)
-            # source venv/bin/activate
-            # pip install -r requirements.txt
-            # python manage.py migrate --noinput
-            # python manage.py collectstatic --noinput
-            
-            # 4. 重新載入 Django
+            cd "$TARGET_DIR"
+      
+            git fetch origin "${{ github.ref_name }}"
+            git reset --hard "origin/${{ github.ref_name }}"
+      
             touch ntub_usedbooks/wsgi.py
+            echo "部署完成！"
             
             echo "部署完成！"
