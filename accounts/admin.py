@@ -13,10 +13,10 @@ class UserProfileInline(admin.StackedInline):
     can_delete = False
     verbose_name_plural = '詳細個人資料'
     
-    # 修正 1：確保這裡有 autocomplete
+    # 確保這裡有 autocomplete
     autocomplete_fields = ['department'] 
 
-    # 修正 2：直接覆寫查詢邏輯，強迫它只抓必要的資料
+    # 直接覆寫查詢邏輯，強迫它只抓必要的資料
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('department')
     
@@ -32,9 +32,6 @@ class CustomUserAdmin(UserAdmin):
     ordering = ('-date_joined',)
     actions = ['make_suspended', 'make_active', 'export_as_csv']
     
-    # def get_queryset(self, request):
-    #     return super().get_queryset(request).prefetch_related('userprofile__department')
-
     # 表單分組設定
     fieldsets = UserAdmin.fieldsets + (
         ('平台自訂權限', {'fields': ('account_status',)}),
