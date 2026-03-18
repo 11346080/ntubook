@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ listing.book.title }} - 北商傳書{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-6">
+        {% with listing.listing_images.all|first as primary_image %}
+        {% if primary_image %}
+        <img src="{{ primary_image.file_path.url }}" class="img-fluid rounded" alt="{{ listing.book.title }}">
+        {% endif %}
+        {% endwith %}
+    </div>
+    <div class="col-md-6">
+        <h1>{{ listing.book.title }}</h1>
+        <table class="table table-borderless mt-3">
+            <tr>
+                <th>價格：</th>
+                <td>NT${{ listing.used_price }}</td>
+            </tr>
+            <tr>
+                <th>書況：</th>
+                <td>{{ listing.get_condition_level_display }}</td>
+            </tr>
+            {% if listing.origin_academic_year %}
+            <tr>
+                <th>原始學年度：</th>
+                <td>{{ listing.origin_academic_year }}</td>
+            </tr>
+            {% endif %}
+            {% if listing.origin_term %}
+            <tr>
+                <th>原始學期：</th>
+                <td>{% if listing.origin_term == 1 %}上學期{% else %}下學期{% endif %}</td>
+            </tr>
+            {% endif %}
+            {% if listing.origin_class_group %}
+            <tr>
+                <th>原始課程班級：</th>
+                <td>{{ listing.origin_class_group.name_zh }}</td>
+            </tr>
+            {% endif %}
+            {% if listing.description %}
+            <tr>
+                <th>商品說明：</th>
+                <td>{{ listing.description|linebreaks }}</td>
+            </tr>
+            {% endif %}
+            {% if listing.seller_note %}
+            <tr>
+                <th>賣家備註：</th>
+                <td>{{ listing.seller_note|linebreaks }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <th>上架時間：</th>
+                <td>{{ listing.created_at|date:"Y/m/d H:i" }}</td>
+            </tr>
+        </table>
+
+        <a href="{% url 'listings:listing_list' %}" class="btn btn-secondary mt-4">返回列表</a>
+    </div>
+</div>
+{% endblock %}

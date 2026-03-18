@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block title %}二手書刊登 - 北商傳書{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">二手書刊登</h1>
+
+<div class="row">
+    {% for listing in listings %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">{{ listing.book.title }}</h5>
+                <p class="card-text">
+                    <strong>價格：</strong>NT${{ listing.used_price }}<br>
+                    <strong>書況：</strong>{{ listing.get_condition_level_display }}
+                </p>
+                <a href="{% url 'listings:listing_detail' listing.pk %}" class="btn btn-primary">查看詳情</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <p class="text-muted">目前沒有上架的二手書。</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
