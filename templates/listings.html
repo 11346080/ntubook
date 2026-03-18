@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+
+{% block title %}書籍列表 - NTUB 二手書平台{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/listings.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="row mt-4">
+    <!-- 左側篩選欄 (3欄) -->
+    <div class="col-lg-3">
+        <div class="filter-section">
+            <h6><i class="fas fa-filter"></i> 篩選條件</h6>
+
+            <form method="GET" id="filterForm">
+                <!-- 關鍵字搜尋 -->
+                <div class="filter-group">
+                    <label for="keyword">關鍵字</label>
+                    <input type="text" id="keyword" name="keyword" placeholder="輸入書名、作者..." value="">
+                </div>
+
+                <!-- ISBN -->
+                <div class="filter-group">
+                    <label for="isbn">ISBN</label>
+                    <input type="text" id="isbn" name="isbn" placeholder="例：978-xxx..." value="">
+                </div>
+
+                <!-- 價格區間 -->
+                <div class="filter-group">
+                    <label>價格區間 (元)</label>
+                    <div class="price-range">
+                        <input type="number" id="min_price" name="min_price" placeholder="最低" value="" min="0">
+                        <span class="price-range-separator">-</span>
+                        <input type="number" id="max_price" name="max_price" placeholder="最高" value="" min="0">
+                    </div>
+                </div>
+
+                <!-- 系所篩選 -->
+                <div class="filter-group">
+                    <label for="department_id">系所</label>
+                    <select id="department_id" name="department_id">
+                        <option value="">-- 選擇系所 --</option>
+                        <option value="1">會計系</option>
+                        <option value="2">財務管理系</option>
+                        <option value="3">企業管理系</option>
+                        <option value="4">商業設計管理系</option>
+                        <option value="5">國際商務系</option>
+                        <option value="6">資訊管理系</option>
+                        <option value="7">應用外語系</option>
+                        <option value="8">經營管理系</option>
+                    </select>
+                </div>
+
+                <!-- 書況篩選 -->
+                <div class="filter-group">
+                    <label>書況狀態</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="condition_new" name="condition_level" value="new">
+                        <label class="form-check-label" for="condition_new">全新</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="condition_good" name="condition_level" value="good">
+                        <label class="form-check-label" for="condition_good">良好</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="condition_fair" name="condition_level" value="fair">
+                        <label class="form-check-label" for="condition_fair">一般</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="condition_worn" name="condition_level" value="worn">
+                        <label class="form-check-label" for="condition_worn">有損</label>
+                    </div>
+                </div>
+
+                <!-- 上架狀態篩選 -->
+                <div class="filter-group">
+                    <label>上架狀態</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="status_published" name="status" value="published">
+                        <label class="form-check-label" for="status_published">已上架</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="status_reserved" name="status" value="reserved">
+                        <label class="form-check-label" for="status_reserved">保留中</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="status_sold" name="status" value="sold">
+                        <label class="form-check-label" for="status_sold">已售出</label>
+                    </div>
+                </div>
+
+                <!-- 按鈕 -->
+                <button type="submit" class="btn-filter">
+                    <i class="fas fa-search"></i> 搜尋
+                </button>
+                <button type="reset" class="btn-filter-reset">清除篩選</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 右側書籍列表 (9欄) -->
+    <div class="col-lg-9">
+        <!-- 列表頭部 -->
+        <div class="listings-header">
+            <div class="listings-title">
+                <h2>二手書籍</h2>
+                <small class="text-muted">找到 24 本書籍</small>
+            </div>
+            <div class="listings-sort">
+                <label for="sortBy" class="text-muted">排序：</label>
+                <select id="sortBy" name="sort">
+                    <option value="latest">最新上架</option>
+                    <option value="price-low">價格：低到高</option>
+                    <option value="price-high">價格：高到低</option>
+                    <option value="popular">熱度</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 書籍網格 (每列3張) -->
+        <div class="row g-4">
+            <!-- 書籍卡片 1 -->
+            <div class="col-md-4">
+                <div class="card book-card">
+                    <div class="book-card-img-wrapper">
+                        <img src="https://via.placeholder.com/300x400?text=Book+Cover" alt="書籍封面">
+                        <div class="book-card-badges">
+                            <span class="badge badge-success book-card-condition">全新</span>
+                            <span class="badge badge-success book-card-status">已上架</span>
+                        </div>
+                    </div>
+                    <div class="book-card-body">
+                        <h5 class="book-title">Python 從入門到精通</h5>
+                        <p class="book-author">作者：Mark Lutz</p>
+                        <span class="book-department">資管系</span>
+                        <div class="book-price">NT$450</div>
+                        <p class="book-seller"><i class="fas fa-user-circle"></i> 林小美</p>
+                        <div class="book-card-actions">
+                            <button class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-heart"></i> 收藏
+                            </button>
+                            <button class="btn btn-accent btn-sm" data-bs-toggle="modal" data-bs-target="#reserveModal">
+                                <i class="fas fa-shopping-cart"></i> 預約
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 書籍卡片 2 -->
+            <div class="col-md-4">
+                <div class="card book-card">
+                    <div class="book-card-img-wrapper">
+                        <img src="https://via.placeholder.com/300x400?text=Book+Cover" alt="書籍封面">
+                        <div class="book-card-badges">
+                            <span class="badge badge-warning book-card-condition">良好</span>
+                            <span class="badge badge-success book-card-status">已上架</span>
+                        </div>
+                    </div>
+                    <div class="book-card-body">
+                        <h5 class="book-title">深入淺出 設計模式</h5>
+                        <p class="book-author">作者：Gang of Four</p>
+                        <span class="book-department">企管系</span>
+                        <div class="book-price">NT$380</div>
+                        <p class="book-seller"><i class="fas fa-user-circle"></i> 王大明</p>
+                        <div class="book-card-actions">
+                            <button class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-heart"></i> 收藏
+                            </button>
+                            <button class="btn btn-accent btn-sm" data-bs-toggle="modal" data-bs-target="#reserveModal">
+                                <i class="fas fa-shopping-cart"></i> 預約
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 書籍卡片 3 -->
+            <div class="col-md-4">
+                <div class="card book-card">
+                    <div class="book-card-img-wrapper">
+                        <img src="https://via.placeholder.com/300x400?text=Book+Cover" alt="書籍封面">
+                        <div class="book-card-badges">
+                            <span class="badge badge-danger book-card-condition">有損</span>
+                            <span class="badge badge-warning book-card-status">保留中</span>
+                        </div>
+                    </div>
+                    <div class="book-card-body">
+                        <h5 class="book-title">財務會計理論</h5>
+                        <p class="book-author">作者：Kieso, Weygandt</p>
+                        <span class="book-department">會計系</span>
+                        <div class="book-price">NT$220</div>
+                        <p class="book-seller"><i class="fas fa-user-circle"></i> 陳思婷</p>
+                        <div class="book-card-actions">
+                            <button class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-heart"></i> 收藏
+                            </button>
+                            <button class="btn btn-accent btn-sm" disabled>
+                                <i class="fas fa-shopping-cart"></i> 預約
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 書籍卡片 4 -->
+            <div class="col-md-4">
+                <div class="card book-card">
+                    <div class="book-card-img-wrapper">
+                        <img src="https://via.placeholder.com/300x400?text=Book+Cover" alt="書籍封面">
+                        <div class="book-card-badges">
+                            <span class="badge badge-success book-card-condition">全新</span>
+                            <span class="badge badge-success book-card-status">已上架</span>
+                        </div>
+                    </div>
+                    <div class="book-card-body">
+                        <h5 class="book-title">英文文法完全攻略</h5>
+                        <p class="book-author">作者：Raymond Murphy</p>
+                        <span class="book-department">應外系</span>
+                        <div class="book-price">NT$320</div>
+                        <p class="book-seller"><i class="fas fa-user-circle"></i> 楊欣怡</p>
+                        <div class="book-card-actions">
+                            <button class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-heart"></i> 收藏
+                            </button>
+                            <button class="btn btn-accent btn-sm" data-bs-toggle="modal" data-bs-target="#reserveModal">
+                                <i class="fas fa-shopping-cart"></i> 預約
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 書籍卡片 5 -->
+            <div class="col-md-4">
+                <div class="card book-card">
+                    <div class="book-card-img-wrapper">
+                        <img src="https://via.placeholder.com/300x400?text=Book+Cover" alt="書籍封面">
+                        <div class="book-card-badges">
+                            <span class="badge badge-warning book-card-condition">一般</span>
+                            <span class="badge badge-success book-card-status">已上架</span>
+                        </div>
+                    </div>
+                    <div class="book-card-body">
+                        <h5 class="book-title">市場行銷學概論</h5>
+                        <p class="book-author">作者：Kotler & Keller</p>
+                        <span class="book-department">企管系</span>
+                        <div class="book-price">NT$550</div>
+                        <p class="book-seller"><i class="fas fa-user-circle"></i> 徐家豪</p>
+                        <div class="book-card-actions">
+                            <button class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-heart"></i> 收藏
+                            </button>
+                            <button class="btn btn-accent btn-sm" data-bs-toggle="modal" data-bs-target="#reserveModal">
+                                <i class="fas fa-shopping-cart"></i> 預約
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 書籍卡片 6 -->
+            <div class="col-md-4">
+                <div class="card book-card">
+                    <div class="book-card-img-wrapper">
+                        <img src="https://via.placeholder.com/300x400?text=Book+Cover" alt="書籍封面">
+                        <div class="book-card-badges">
+                            <span class="badge badge-success book-card-condition">全新</span>
+                            <span class="badge badge-danger book-card-status">已售出</span>
+                        </div>
+                    </div>
+                    <div class="book-card-body">
+                        <h5 class="book-title">資料結構與演算法</h5>
+                        <p class="book-author">作者：Cormen et al.</p>
+                        <span class="book-department">資管系</span>
+                        <div class="book-price">NT$650</div>
+                        <p class="book-seller"><i class="fas fa-user-circle"></i> 黃煜琨</p>
+                        <div class="book-card-actions">
+                            <button class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-heart"></i> 收藏
+                            </button>
+                            <button class="btn btn-accent btn-sm" disabled>
+                                <i class="fas fa-shopping-cart"></i> 預約
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分頁 -->
+        <nav aria-label="Page navigation" style="margin-top: 3rem;">
+            <ul class="pagination justify-content-center">
+                <li class="page-item">
+                    <a class="page-link" href="#" style="color: var(--primary-color);">上一頁</a>
+                </li>
+                <li class="page-item active">
+                    <a class="page-link" href="#" style="background-color: var(--primary-color); border-color: var(--primary-color);">1</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">2</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">3</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="#">下一頁</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/listings.js') }}"></script>
+{% endblock %}
