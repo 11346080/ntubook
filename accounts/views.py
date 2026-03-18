@@ -3,11 +3,25 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.views import View
 from django.contrib.admin.views.decorators import staff_member_required
 from django.utils.decorators import method_decorator
+from django.contrib.auth.decorators import login_required
 
 
 class DashboardView(LoginRequiredMixin, View):
     def get(self, request):
         return render(request, 'accounts/dashboard.html')
+
+
+# W4: 新增 FBV 使用 @login_required decorator 範例
+@login_required
+def profile_view(request):
+    """
+    使用者個人頁面 - FBV + @login_required decorator 範例
+    W4 要求：明確的 decorator 實例
+    """
+    return render(request, 'accounts/profile.html', {
+        'title': '個人資料',
+        'user': request.user,
+    })
 
 
 # W4: 添加自訂 View 到 Admin Site - Admin Dashboard
