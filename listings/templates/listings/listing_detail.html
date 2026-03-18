@@ -31,7 +31,7 @@
             {% if listing.origin_term %}
             <tr>
                 <th>原始學期：</th>
-                <td>{% if listing.origin_term == 1 %}上學期{% else %}下學期{% endif %}</td>
+                <td>{{ listing.get_origin_term_display }}</td>
             </tr>
             {% endif %}
             {% if listing.origin_class_group %}

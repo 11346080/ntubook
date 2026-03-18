@@ -8,7 +8,10 @@ class ListingListView(ListView):
     context_object_name = 'listings'
 
     def get_queryset(self):
-        return Listing.objects.filter(status='PUBLISHED', deleted_at__isnull=True).order_by('-created_at')
+        return (Listing.objects
+                .filter(status='PUBLISHED', deleted_at__isnull=True)
+                .select_related('book', 'seller')
+                .order_by('-created_at'))
 
 
 class ListingDetailView(DetailView):
@@ -17,4 +20,7 @@ class ListingDetailView(DetailView):
     context_object_name = 'listing'
 
     def get_queryset(self):
-        return Listing.objects.filter(status='PUBLISHED', deleted_at__isnull=True)
+        return (Listing.objects
+                .filter(status='PUBLISHED', deleted_at__isnull=True)
+                .select_related('book', 'seller')
+                .prefetch_related('listing_images'))
