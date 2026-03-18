@@ -11,9 +11,12 @@ class User(AbstractUser):
         RESTRICTED_LISTING = 'RESTRICTED_LISTING', '限制刊登'
 
     # email: 第一階段先沿用 AbstractUser 預設（nullable, non-unique）
+    #        實際：Django 預設 EmailField 為 blank=True, null=False（ORM 層允許空白）
+    #        資料庫層：users_user.email 目前無 UNIQUE 約束
     #        第二階段（0004）再加入 unique=True
     email = models.EmailField(
         max_length=254,
+        blank=True,
         verbose_name='校內信箱'
     )
 
