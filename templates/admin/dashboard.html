@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}儀表板 - 北商傳書 後台{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="my-4">儀表板</h1>
+    
+    <!-- 統計卡片區 -->
+    <div class="row">
+        <!-- 使用者統計 -->
+        <div class="col-md-3">
+            <div class="card text-white bg-primary mb-3">
+                <div class="card-header">使用者</div>
+                <div class="card-body">
+                    <h5 class="card-title">總使用者: {{ total_users }}</h5>
+                    <p class="card-text">啟用中: {{ active_users }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 書籍統計 -->
+        <div class="col-md-3">
+            <div class="card text-white bg-success mb-3">
+                <div class="card-header">書籍</div>
+                <div class="card-body">
+                    <h5 class="card-title">書籍庫總數: {{ total_books }}</h5>
+                    <p class="card-text">已收錄書籍</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 刊登統計 -->
+        <div class="col-md-3">
+            <div class="card text-white bg-info mb-3">
+                <div class="card-header">刊登</div>
+                <div class="card-body">
+                    <h5 class="card-title">總刊登: {{ total_listings }}</h5>
+                    <p class="card-text">上架中: {{ published_listings }} | 已售出: {{ sold_listings }}</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 請求統計 -->
+        <div class="col-md-3">
+            <div class="card text-white bg-warning mb-3">
+                <div class="card-header">預約請求</div>
+                <div class="card-body">
+                    <h5 class="card-title">總請求: {{ total_requests }}</h5>
+                    <p class="card-text">未讀通知: {{ unread_notifications }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 快速操作區 -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>快速操作</h5>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'admin:index' %}" class="btn btn-secondary">返回管理首頁</a>
+                    <a href="{% url 'admin:customuser_changelist' %}" class="btn btn-primary">使用者管理</a>
+                    <a href="{% url 'admin:listing_changelist' %}" class="btn btn-info">刊登管理</a>
+                    <a href="{% url 'admin:book_changelist' %}" class="btn btn-success">書籍管理</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
