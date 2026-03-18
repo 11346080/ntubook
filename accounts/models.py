@@ -4,14 +4,72 @@ from django.db import models
 
 class User(AbstractUser):
     """Custom user model for NTUB Used Books platform."""
-    
+
+    class AccountStatus(models.TextChoices):
+        ACTIVE = 'ACTIVE', '正常'
+        SUSPENDED = 'SUSPENDED', '停權'
+        RESTRICTED_LISTING = 'RESTRICTED_LISTING', '限制刊登'
+
+    # email: 第一階段先沿用 AbstractUser 預設（nullable, non-unique）
+    #        第二階段（0004）再加入 unique=True
+    email = models.EmailField(
+        max_length=254,
+        verbose_name='校內信箱'
+    )
+
+    # google_sub: 第一階段設為 nullable（null=True, blank=True, unique=True）
+    #             第二階段（0004）再改為 not null
+    google_sub = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        unique=True,
+        verbose_name='Google 主體識別碼'
+    )
+
+    auth_provider = models.CharField(
+        max_length=20,
+        default='GOOGLE',
+        verbose_name='驗證來源'
+    )
+
+    account_status = models.CharField(
+        max_length=20,
+        choices=AccountStatus.choices,
+        default=AccountStatus.ACTIVE,
+        verbose_name='帳號狀態'
+    )
+
+    account_status_reason = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name='狀態原因'
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='建立時間'
+    )
+
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='更新時間'
+    )
+
     class Meta:
         db_table = 'users_user'
+        indexes = [
+            models.Index(fields=['account_status'], name='users_user_status_idx'),
+        ]
+
+    def __str__(self):
+        return self.username
 
 
 class UserProfile(models.Model):
     """使用者個人檔 / User Profile"""
-    
+
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,

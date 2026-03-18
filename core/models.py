@@ -3,7 +3,7 @@ from django.db import models
 
 class ProgramType(models.Model):
     """學制主檔 / Program Type"""
-    
+
     code = models.CharField(max_length=10, unique=True, verbose_name='學制代碼')
     name_zh = models.CharField(max_length=100, verbose_name='中文名稱')
     name_en = models.CharField(max_length=100, blank=True, null=True, verbose_name='英文名稱')
@@ -27,7 +27,7 @@ class ProgramType(models.Model):
 
 class Department(models.Model):
     """系所主檔 / Department"""
-    
+
     program_type = models.ForeignKey(
         ProgramType,
         on_delete=models.CASCADE,
@@ -57,7 +57,7 @@ class Department(models.Model):
 
 class ClassGroup(models.Model):
     """班級主檔 / Class Group"""
-    
+
     program_type = models.ForeignKey(
         ProgramType,
         on_delete=models.CASCADE,
