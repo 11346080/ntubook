@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ book.title }} - 北商傳書{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        {% if book.cover_image_url %}
+        <img src="{{ book.cover_image_url }}" class="img-fluid rounded" alt="{{ book.title }}">
+        {% endif %}
+    </div>
+    <div class="col-md-8">
+        <h1>{{ book.title }}</h1>
+        <table class="table table-borderless mt-3">
+            <tr>
+                <th>ISBN-13：</th>
+                <td>{{ book.isbn13 }}</td>
+            </tr>
+            {% if book.isbn10 %}
+            <tr>
+                <th>ISBN-10：</th>
+                <td>{{ book.isbn10 }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <th>作者：</th>
+                <td>{{ book.author_display }}</td>
+            </tr>
+            <tr>
+                <th>出版社：</th>
+                <td>{{ book.publisher }}</td>
+            </tr>
+            {% if book.publication_year %}
+            <tr>
+                <th>出版年份：</th>
+                <td>{{ book.publication_year }} 年</td>
+            </tr>
+            {% endif %}
+            {% if book.edition %}
+            <tr>
+                <th>版本：</th>
+                <td>{{ book.edition }}</td>
+            </tr>
+            {% endif %}
+        </table>
+
+        {% if book.applicabilities.all %}
+        <h4 class="mt-4">適用課程</h4>
+        <ul class="list-group mt-2">
+            {% for app in book.applicabilities.all %}
+            <li class="list-group-item">
+                <strong>{{ app.class_group.name }}</strong> - {{ app.course_name }}
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        <a href="{% url 'books:book_list' %}" class="btn btn-secondary mt-4">返回列表</a>
+    </div>
+</div>
+{% endblock %}

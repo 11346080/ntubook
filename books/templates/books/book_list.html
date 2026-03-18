@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block title %}書籍列表 - 北商傳書{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">書籍列表</h1>
+
+<div class="row">
+    {% for book in books %}
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card h-100">
+            {% if book.cover_image_url %}
+            <img src="{{ book.cover_image_url }}" class="card-img-top" alt="{{ book.title }}">
+            {% endif %}
+            <div class="card-body">
+                <h5 class="card-title">{{ book.title }}</h5>
+                <p class="card-text">
+                    <strong>作者：</strong>{{ book.author_display }}<br>
+                    <strong>出版社：</strong>{{ book.publisher }}
+                </p>
+                <a href="{% url 'books:book_detail' book.pk %}" class="btn btn-primary">查看詳情</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <p class="text-muted">目前沒有書籍資料。</p>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
