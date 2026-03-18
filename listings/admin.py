@@ -4,23 +4,39 @@ from django.utils.html import format_html
 from .models import Listing, ListingImage
 from ntub_usedbooks.admin import ntub_admin_site
 from ntub_usedbooks.admin_utils import export_model_as_csv
+from ntub_usedbooks.admin_helpers import update_status_with_timestamp
 
 
 def make_available(modeladmin, request, queryset):
-    queryset.update(status=Listing.Status.AVAILABLE)
+    count = 0
+    for obj in queryset.select_related('seller', 'book'):
+        if obj.status != Listing.Status.AVAILABLE:
+            update_status_with_timestamp(obj, Listing.Status.AVAILABLE)
+            count += 1
+    modeladmin.message_user(request, f'{count} 件刊登已設為「可購買」。')
 
 
 def make_off_shelf(modeladmin, request, queryset):
-    queryset.update(status=Listing.Status.OFF_SHELF)
+    count = 0
+    for obj in queryset.select_related('seller', 'book'):
+        if obj.status != Listing.Status.OFF_SHELF:
+            update_status_with_timestamp(obj, Listing.Status.OFF_SHELF)
+            count += 1
+    modeladmin.message_user(request, f'{count} 件刊登已「下架」。')
 
 
 def make_removed(modeladmin, request, queryset):
-    queryset.update(status=Listing.Status.REMOVED)
+    count = 0
+    for obj in queryset.select_related('seller', 'book'):
+        if obj.status != Listing.Status.REMOVED:
+            update_status_with_timestamp(obj, Listing.Status.REMOVED)
+            count += 1
+    modeladmin.message_user(request, f'{count} 件刊登已「移除」。')
 
 
-make_available.short_description = '將所選刊登設為「可購買」'
-make_off_shelf.short_description = '將所選刊登「下架」'
-make_removed.short_description = '將所選刊登「移除」'
+make_available.short_description = '將所選刊登設為「可購買」（含時間戳）'
+make_off_shelf.short_description = '將所選刊登「下架」（含時間戳）'
+make_removed.short_description = '將所選刊登「移除」（含時間戳）'
 
 
 @admin.display(description='圖片數')

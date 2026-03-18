@@ -7,11 +7,13 @@ from ntub_usedbooks.admin_utils import export_model_as_csv
 
 
 def mark_metadata_confirmed(modeladmin, request, queryset):
-    queryset.update(metadata_status=Book.MetadataStatus.MANUALLY_CONFIRMED)
+    count = queryset.update(metadata_status=Book.MetadataStatus.MANUALLY_CONFIRMED)
+    modeladmin.message_user(request, f'{count} 本書籍已標記為「已確認」。')
 
 
 def mark_needs_review(modeladmin, request, queryset):
-    queryset.update(metadata_status=Book.MetadataStatus.NEEDS_REVIEW)
+    count = queryset.update(metadata_status=Book.MetadataStatus.NEEDS_REVIEW)
+    modeladmin.message_user(request, f'{count} 本書籍已標記為「需審核」。')
 
 
 mark_metadata_confirmed.short_description = '將所選書籍標記為「已確認」'
@@ -20,9 +22,7 @@ mark_needs_review.short_description = '將所選書籍標記為「需審核」'
 
 @admin.display(description='ISBN')
 def isbn_display(obj):
-    if obj.isbn13:
-        return f'ISBN13: {obj.isbn13}'
-    return f'ISBN10: {obj.isbn10 or "-"}'
+    return f'ISBN13: {obj.isbn13}' if obj.isbn13 else f'ISBN10: {obj.isbn10 or "-"}'
 
 
 @admin.display(description='適用數')

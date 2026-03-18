@@ -13,7 +13,7 @@ def profile_display_name(obj):
     try:
         return obj.profile.display_name
     except UserProfile.DoesNotExist:
-        return '-'
+        return format_html('<span style="color:#c00">未建立</span>')
 
 
 @admin.display(description='帳號完整度')
@@ -27,9 +27,22 @@ def profile_completed(obj):
             bool(p.department),
             bool(p.class_group),
         ])
-        return f'{int(filled / 5 * 100)}%  ({filled}/5)'
     except UserProfile.DoesNotExist:
-        return '未建立'
+        filled = 0
+
+    pct = int(filled / 5 * 100)
+    bar_color = 'green' if pct >= 80 else ('#f0ad4e' if pct >= 40 else '#c00')
+
+    bar = format_html(
+        '<div style="display:inline-flex;align-items:center;gap:6px">'
+        '<div style="width:60px;height:10px;background:#eee;border-radius:5px;overflow:hidden">'
+        '<div style="width:{}%;height:100%;background:{}"></div>'
+        '</div>'
+        '<span style="font-size:11px;color:#555">{}% ({}/5)</span>'
+        '</div>',
+        pct, bar_color, pct, filled
+    )
+    return bar
 
 
 @admin.display(description='角色摘要')
@@ -52,7 +65,7 @@ def role_summary(obj):
     return ' '.join(parts)
 
 
-@admin.display(description='狀態')
+@admin.display(description='帳號狀態')
 def status_badge(obj):
     status_map = {
         'ACTIVE': ('正常', 'color:green;font-weight:bold'),
@@ -63,25 +76,59 @@ def status_badge(obj):
     return format_html('<span style="{}">{}</span>', style, label)
 
 
+@admin.display(description='Staff')
+def is_staff_badge(obj):
+    if obj.is_staff:
+        return format_html('<span style="color:green;font-weight:bold">是</span>')
+    return format_html('<span style="color:#999">否</span>')
+
+
+@admin.display(description='Superuser')
+def is_superuser_badge(obj):
+    if obj.is_superuser:
+        return format_html('<span style="color:#6a0dad;font-weight:bold">是</span>')
+    return format_html('<span style="color:#999">否</span>')
+
+
+def _send_status_notifications(user_ids, new_status, title, message):
+    from notifications.models import Notification
+    for uid in user_ids:
+        Notification.objects.get_or_create(
+            user_id=uid,
+            type_code='ACCOUNT_STATUS_CHANGE',
+            title=title,
+            defaults={'message': message},
+        )
+
+
 @admin.action(description='將所選帳號設為「正常」')
 def make_active(modeladmin, request, queryset):
-    queryset.update(account_status=User.AccountStatus.ACTIVE)
+    user_ids = list(queryset.values_list('pk', flat=True))
+    updated = queryset.update(account_status=User.AccountStatus.ACTIVE)
+    _send_status_notifications(user_ids, 'ACTIVE', '帳號恢復正常通知', '帳號已恢復正常')
+    modeladmin.message_user(request, f'{updated} 個帳號已設為「正常」。')
 
 
 @admin.action(description='將所選帳號設為「停權」')
 def make_suspended(modeladmin, request, queryset):
-    queryset.update(account_status=User.AccountStatus.SUSPENDED)
+    user_ids = list(queryset.values_list('pk', flat=True))
+    updated = queryset.update(account_status=User.AccountStatus.SUSPENDED)
+    _send_status_notifications(user_ids, 'SUSPENDED', '帳號停權通知', '帳號已被停權')
+    modeladmin.message_user(request, f'{updated} 個帳號已設為「停權」。')
 
 
 @admin.action(description='將所選帳號設為「限制刊登」')
 def make_restricted_listing(modeladmin, request, queryset):
-    queryset.update(account_status=User.AccountStatus.RESTRICTED_LISTING)
+    user_ids = list(queryset.values_list('pk', flat=True))
+    updated = queryset.update(account_status=User.AccountStatus.RESTRICTED_LISTING)
+    _send_status_notifications(user_ids, 'RESTRICTED_LISTING', '帳號限制刊登通知', '帳號已被限制刊登功能')
+    modeladmin.message_user(request, f'{updated} 個帳號已設為「限制刊登」。')
 
 
 class UserAdmin(BaseUserAdmin):
     list_display = [
         'username', profile_display_name, 'email',
-        'account_status', status_badge, 'is_staff', 'is_superuser', 'is_active',
+        status_badge, is_staff_badge, is_superuser_badge,
         profile_completed, role_summary, 'created_at',
     ]
     list_display_links = ['username']

@@ -8,19 +8,40 @@ from ntub_usedbooks.admin_utils import export_model_as_csv
 
 
 def mark_accepted(modeladmin, request, queryset):
-    queryset.update(status=PurchaseRequest.Status.ACCEPTED)
+    count = 0
+    for obj in queryset.select_related('listing', 'listing__book', 'buyer'):
+        if obj.status != PurchaseRequest.Status.ACCEPTED:
+            obj.status = PurchaseRequest.Status.ACCEPTED
+            obj.responded_at = timezone.now()
+            obj.contact_released_at = timezone.now()
+            obj.save(update_fields=['status', 'responded_at', 'contact_released_at', 'updated_at'])
+            count += 1
+    modeladmin.message_user(request, f'{count} 件請求已標記為「已接受」（含時間戳）。')
 
 
 def mark_rejected(modeladmin, request, queryset):
-    queryset.update(status=PurchaseRequest.Status.REJECTED)
+    count = 0
+    for obj in queryset.select_related('listing', 'listing__book', 'buyer'):
+        if obj.status != PurchaseRequest.Status.REJECTED:
+            obj.status = PurchaseRequest.Status.REJECTED
+            obj.responded_at = timezone.now()
+            obj.save(update_fields=['status', 'responded_at', 'updated_at'])
+            count += 1
+    modeladmin.message_user(request, f'{count} 件請求已標記為「已拒絕」（含時間戳）。')
 
 
 def mark_expired(modeladmin, request, queryset):
-    queryset.update(status=PurchaseRequest.Status.EXPIRED)
+    count = 0
+    for obj in queryset.select_related('listing', 'listing__book', 'buyer'):
+        if obj.status not in (PurchaseRequest.Status.EXPIRED,):
+            obj.status = PurchaseRequest.Status.EXPIRED
+            obj.save(update_fields=['status', 'updated_at'])
+            count += 1
+    modeladmin.message_user(request, f'{count} 件請求已標記為「已過期」。')
 
 
-mark_accepted.short_description = '將所選請求標記為「已接受」'
-mark_rejected.short_description = '將所選請求標記為「已拒絕」'
+mark_accepted.short_description = '將所選請求標記為「已接受」（含時間戳）'
+mark_rejected.short_description = '將所選請求標記為「已拒絕」（含時間戳）'
 mark_expired.short_description = '將所選請求標記為「已過期」'
 
 
