@@ -20,8 +20,8 @@ from . import views # add views import @X!aN
 from accounts.views import AdminDashboardView
 
 urlpatterns = [
+    path('admin/dashboard/', AdminDashboardView.as_view(), name='admin-dashboard'),  # W4: 自訂 Admin Dashboard (必須放在 admin.site.urls 前面)
     path('admin/', admin.site.urls),
-    path('admin/dashboard/', AdminDashboardView.as_view(), name='admin-dashboard'),  # W4: 自訂 Admin Dashboard
     path('', views.index, name='index'),
     path('accounts/', include('accounts.urls', namespace='accounts')),
     path('books/', include('books.urls', namespace='books')),
