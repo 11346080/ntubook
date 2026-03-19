@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -6,22 +7,35 @@ class Book(models.Model):
     """書籍主檔 / Book"""
 
     class MetadataSource(models.TextChoices):
-        GOOGLE_BOOKS = 'GOOGLE_BOOKS', 'Google Books'
         MANUAL = 'MANUAL', '手動輸入'
-        LOCAL = 'LOCAL', '本地資料'
+        MYTB   = 'MYTB',  'Mytb API 匯入'
+        IMPORT = 'IMPORT', '批量匯入'
 
     class MetadataStatus(models.TextChoices):
-        AUTO_IMPORTED = 'AUTO_IMPORTED', '自動匯入'
-        MANUALLY_CONFIRMED = 'MANUALLY_CONFIRMED', '已手動確認'
-        NEEDS_REVIEW = 'NEEDS_REVIEW', '需審核'
+        NEEDS_REVIEW       = 'NEEDS_REVIEW',       '待審核'
+        MANUALLY_CONFIRMED = 'MANUALLY_CONFIRMED', '已確認'
 
     isbn13 = models.CharField(max_length=20, unique=True, verbose_name='ISBN-13')
     isbn10 = models.CharField(max_length=20, blank=True, null=True, verbose_name='ISBN-10')
     title = models.CharField(max_length=255, verbose_name='書名')
     author_display = models.CharField(max_length=255, verbose_name='作者')
     publisher = models.CharField(max_length=255, verbose_name='出版社')
-    publication_date = models.DateField(blank=True, null=True, verbose_name='出版日期')
-    publication_date_text = models.CharField(max_length=50, blank=True, null=True, verbose_name='出版日期原始字串')
+    publication_year = models.PositiveSmallIntegerField(
+        blank=True,
+        null=True,
+        verbose_name='出版年份',
+        validators=[
+            MinValueValidator(1900),
+            MaxValueValidator(2100),
+        ],
+    )
+    publication_date_text = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name='出版日期原始字串',
+        help_text='外部來源原始日期快照，不可編輯',
+    )
     edition = models.CharField(max_length=50, blank=True, null=True, verbose_name='版次')
     language_code = models.CharField(max_length=20, default='zh-TW', verbose_name='語言代碼')
     cover_image_url = models.URLField(max_length=500, blank=True, null=True, verbose_name='封面圖片')

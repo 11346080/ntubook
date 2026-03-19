@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
 
+from .forms import BookForm
 from .models import Book, BookApplicability, BookFavorite
 from ntub_usedbooks.admin import ntub_admin_site
 from ntub_usedbooks.admin_utils import export_model_as_csv
@@ -38,7 +39,6 @@ def favorite_count(obj):
 @admin.display(description='資料狀態')
 def metadata_status_display(obj):
     status_map = {
-        'AUTO_IMPORTED': ('自動匯入', '#888'),
         'MANUALLY_CONFIRMED': ('已確認', 'green'),
         'NEEDS_REVIEW': ('需審核', '#c60'),
     }
@@ -58,6 +58,8 @@ class BookApplicabilityInline(admin.TabularInline):
 
 
 class BookAdmin(admin.ModelAdmin):
+    form = BookForm
+
     list_display = [
         'id', isbn_display, 'title', 'author_display', 'publisher',
         'metadata_source', metadata_status_display,
@@ -69,7 +71,7 @@ class BookAdmin(admin.ModelAdmin):
     list_filter = ['metadata_source', 'metadata_status', 'language_code']
     ordering = ['title']
     list_per_page = 50
-    readonly_fields = ['created_at', 'updated_at']
+    readonly_fields = ['created_at', 'updated_at', 'publication_date_text']
 
     inlines = [BookApplicabilityInline]
 
@@ -81,7 +83,7 @@ class BookAdmin(admin.ModelAdmin):
             'fields': ('title', 'author_display', 'publisher'),
         }),
         ('出版資訊', {
-            'fields': ('publication_date', 'publication_date_text', 'edition', 'language_code'),
+            'fields': ('publication_year', 'publication_date_text', 'edition', 'language_code'),
         }),
         ('視覺資訊', {
             'fields': ('cover_image_url',),
