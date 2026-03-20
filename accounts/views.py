@@ -58,7 +58,10 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         ctx = super().get_context_data(**kwargs)
         ctx['active_tab'] = self.request.GET.get('tab', 'profile')
         user = self.request.user
-        ctx['user_profile'] = getattr(user, 'profile', None)
+        try:
+            ctx['user_profile'] = user.profile
+        except UserProfile.DoesNotExist:
+            ctx['user_profile'] = None
         ctx['unread_notification_count'] = 0  # TODO: 實作通知未讀數
         return ctx
 
@@ -73,4 +76,13 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
     success_url = '/accounts/dashboard/?tab=profile'
 
     def get_object(self):
-        return self.request.user.profile
+        try:
+            return self.request.user.profile
+        except UserProfile.DoesNotExist:
+            return None
+
+    def get(self, request, *args, **kwargs):
+        obj = self.get_object()
+        if obj is None:
+            return redirect('accounts:first_login')
+        return super().get(request, *args, **kwargs)
