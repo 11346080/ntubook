@@ -4,7 +4,7 @@ from django.db import models
 
 class User(AbstractUser):
     """Custom user model for NTUB Used Books platform."""
-
+    
     class AccountStatus(models.TextChoices):
         ACTIVE = 'ACTIVE', '正常'
         SUSPENDED = 'SUSPENDED', '停權'
@@ -62,6 +62,8 @@ class User(AbstractUser):
 
     class Meta:
         db_table = 'users_user'
+        verbose_name = '使用者'
+        verbose_name_plural = '使用者'
         indexes = [
             models.Index(fields=['account_status'], name='users_user_status_idx'),
         ]
