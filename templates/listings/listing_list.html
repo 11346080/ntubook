@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}刊登列表 - NTUB 二手書平台{% endblock %}
+
+{% block content %}
+<div class="mt-4">
+    <h2>二手書籍列表</h2>
+    {% if listings %}
+        <ul>
+        {% for listing in listings %}
+            <li>
+                <a href="{% url 'listings:listing_detail' listing.pk %}">
+                    {{ listing.book.title }} - NT${{ listing.used_price }}
+                </a>
+                ({{ listing.get_condition_level_display }})
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>目前沒有可購買的刊登。</p>
+    {% endif %}
+    <p><a href="{% url 'listings:listing_create' %}">建立新刊登</a></p>
+</div>
+{% endblock %}

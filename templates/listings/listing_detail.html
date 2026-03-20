@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}刊登詳情 - NTUB 二手書平台{% endblock %}
+
+{% block content %}
+<div class="mt-4">
+    <h2>{{ listing.book.title }}</h2>
+    <p>價格：NT${{ listing.used_price }}</p>
+    <p>書況：{{ listing.get_condition_level_display }}</p>
+    <p>描述：{{ listing.description|default:'無' }}</p>
+    <p>賣家：{{ listing.seller.username }}</p>
+    <p><a href="{% url 'listings:listing_list' %}">返回列表</a></p>
+</div>
+{% endblock %}

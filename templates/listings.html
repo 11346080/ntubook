@@ -1,9 +1,10 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block title %}書籍列表 - NTUB 二手書平台{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/listings.css') }}">
+<link rel="stylesheet" href="{% static 'css/listings.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -314,5 +315,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/listings.js') }}"></script>
+<script src="{% static 'js/listings.js' %}"></script>
 {% endblock %}

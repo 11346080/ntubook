@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}通知列表 - NTUB 二手書平台{% endblock %}
+
+{% block content %}
+<div class="mt-4">
+    <h2>我的通知</h2>
+    {% if notifications %}
+        <ul>
+        {% for n in notifications %}
+            <li>
+                <strong>{{ n.title }}</strong>
+                - {{ n.message }}
+                {% if not n.is_read %}[未讀]{% endif %}
+            </li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>目前沒有通知。</p>
+    {% endif %}
+</div>
+{% endblock %}
