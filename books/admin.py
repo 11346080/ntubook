@@ -105,7 +105,7 @@ class BookApplicabilityAdmin(admin.ModelAdmin):
         'class_group', 'source_type', 'created_at',
     ]
     search_fields = ['book__title', 'book__isbn13']
-    list_filter = ['source_type', 'academic_year', 'term', 'class_group__program_type']
+    list_filter = ['source_type', 'academic_year', 'term', 'class_group__department__program_type']
     ordering = ['-created_at']
     list_per_page = 50
     readonly_fields = ['created_at', 'updated_at']
