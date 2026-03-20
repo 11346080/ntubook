@@ -23,23 +23,23 @@ class ProgramTypeAdmin(admin.ModelAdmin):
 
 
 class DepartmentAdmin(admin.ModelAdmin):
-    list_display = ['id', 'code', 'name_zh', 'campus', 'program_type', 'is_active', 'created_at']
+    list_display = ['id', 'code', 'name_zh', 'program_type', 'is_active', 'created_at']
     search_fields = ['code', 'name_zh', 'name_en']
-    list_filter = ['is_active', 'program_type', 'campus']
+    list_filter = ['is_active', 'program_type']
     ordering = ['program_type__code', 'code']
     list_per_page = 100
     readonly_fields = ['created_at', 'updated_at']
-    raw_id_fields = ['campus', 'program_type']
+    raw_id_fields = ['program_type']
 
 
 class ClassGroupAdmin(admin.ModelAdmin):
-    list_display = ['id', 'code', 'name_zh', 'department', 'grade_no', 'section_code', 'is_active', 'created_at']
+    list_display = ['id', 'code', 'name_zh', 'program_type', 'department', 'grade_no', 'section_code', 'is_active', 'created_at']
     search_fields = ['code', 'name_zh']
-    list_filter = ['is_active', 'grade_no', 'department__program_type', 'department__campus']
-    ordering = ['department__program_type__code', 'department__code', 'grade_no', 'section_code']
+    list_filter = ['is_active', 'grade_no', 'program_type']
+    ordering = ['program_type__code', 'department__code', 'grade_no', 'section_code']
     list_per_page = 100
     readonly_fields = ['created_at', 'updated_at']
-    raw_id_fields = ['department']
+    raw_id_fields = ['program_type', 'department']
 
 
 class StudentNumberRuleAdmin(admin.ModelAdmin):
