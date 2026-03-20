@@ -1,8 +1,11 @@
-from django.views.generic import TemplateView, FormView
+from django.views.generic import TemplateView, FormView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LogoutView
+from django.contrib.auth import logout
 from django.shortcuts import redirect
 
 from .forms import UserProfileForm
+from .models import UserProfile
 
 
 # =============================================================================
@@ -12,6 +15,14 @@ from .forms import UserProfileForm
 # =============================================================================
 class OAuthEntryView(TemplateView):
     template_name = 'accounts/login.html'
+
+
+# =============================================================================
+# 登出
+# =============================================================================
+def logout_view(request):
+    logout(request)
+    return redirect('/accounts/login/')
 
 
 # =============================================================================
@@ -46,4 +57,20 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['active_tab'] = self.request.GET.get('tab', 'profile')
+        user = self.request.user
+        ctx['user_profile'] = getattr(user, 'profile', None)
+        ctx['unread_notification_count'] = 0  # TODO: 實作通知未讀數
         return ctx
+
+
+# =============================================================================
+# 編輯個人資料（分頁 1：Edit Profile）
+# =============================================================================
+class ProfileUpdateView(LoginRequiredMixin, UpdateView):
+    model = UserProfile
+    form_class = UserProfileForm
+    template_name = 'accounts/profile_edit.html'
+    success_url = '/accounts/dashboard/?tab=profile'
+
+    def get_object(self):
+        return self.request.user.profile

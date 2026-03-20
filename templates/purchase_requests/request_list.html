@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block title %}預約請求 - 北商傳書{% endblock %}
+
+{% block extra_css %}
+<style>
+.role-tabs .nav-link {
+    color: #6c757d;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+}
+.role-tabs .nav-link.active {
+    color: #0d6efd;
+    border-bottom-color: #0d6efd;
+    background: none;
+}
+.request-card {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid #e9ecef;
+    margin-bottom: 0.75rem;
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow 0.2s;
+}
+.request-card:hover {
+    box-shadow: 0 0.25rem 0.75rem rgba(0,0,0,0.08);
+    text-decoration: none;
+    color: inherit;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="mb-0"><i class="fas fa-hand-paper me-2"></i>預約請求</h2>
+</div>
+
+<!-- 角色切換 tabs -->
+<ul class="nav role-tabs mb-4" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_role == 'buyer' %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#panel-buyer" type="button" role="tab">
+            <i class="fas fa-shopping-bag me-1"></i>我做為買家
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_role == 'seller' %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#panel-seller" type="button" role="tab">
+            <i class="fas fa-store me-1"></i>我做為賣家
+        </button>
+    </li>
+</ul>
+
+<div class="tab-content">
+
+    <!-- 買家視角：我的請求 -->
+    <div class="tab-pane fade {% if active_role == 'buyer' %}show active{% endif %}"
+         id="panel-buyer" role="tabpanel">
+        {% if requests %}
+            {% for req in requests %}
+            <a href="{% url 'purchase_requests:request_detail' req.pk %}" class="request-card">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ req.listing.book.title }}</strong>
+                        <span class="badge bg-secondary ms-2">{{ req.get_status_display }}</span>
+                    </div>
+                    <div class="text-muted small">{{ req.created_at|date:"Y/m/d H:i" }}</div>
+                </div>
+            </a>
+            {% endfor %}
+        {% else %}
+            <div class="text-center py-5" style="color:#adb5bd">
+                <i class="fas fa-inbox" style="font-size:3rem"></i>
+                <p class="mt-3 mb-1">尚無預約請求</p>
+                <a href="{% url 'listings:listing_list' %}" class="btn btn-outline-primary btn-sm">
+                    前往瀏覽書籍
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- 賣家視角：收到的請求 -->
+    <div class="tab-pane fade {% if active_role == 'seller' %}show active{% endif %}"
+         id="panel-seller" role="tabpanel">
+        {% if seller_requests %}
+            {% for req in seller_requests %}
+            <div class="request-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <strong>{{ req.listing.book.title }}</strong>
+                        <span class="badge bg-secondary ms-2">{{ req.get_status_display }}</span>
+                        <div class="text-muted small mt-1">
+                            買家：{{ req.buyer.profile.display_name|default:req.buyer.username }}
+                        </div>
+                        {% if req.buyer_message %}
+                            <div class="text-muted small mt-1">
+                                <i class="fas fa-comment me-1"></i>{{ req.buyer_message|truncatechars:60 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="text-end">
+                        <div class="text-muted small mb-2">{{ req.created_at|date:"Y/m/d H:i" }}</div>
+                        {% if req.status == 'PENDING' %}
+                            <form method="post" action="{% url 'purchase_requests:request_accept' req.pk %}"
+                                  class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-sm mb-1 w-100">接受</button>
+                            </form>
+                            <form method="post" action="{% url 'purchase_requests:request_reject' req.pk %}"
+                                  class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger btn-sm w-100">拒絕</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="text-center py-5" style="color:#adb5bd">
+                <i class="fas fa-inbox" style="font-size:3rem"></i>
+                <p class="mt-3 mb-0">尚無收到的預約請求</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

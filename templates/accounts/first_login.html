@@ -1,16 +1,111 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>首次登入資料建立</title>
-</head>
-<body>
-    <h1>首次登入資料建立</h1>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">送出</button>
-    </form>
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% block title %}首次登入 - 北商傳書{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header { margin-bottom: 1.5rem; }
+.form-card {
+    background: white;
+    border-radius: 0.75rem;
+    padding: 2rem;
+    box-shadow: 0 0.25rem 1rem rgba(0,0,0,0.05);
+}
+.form-card h2 {
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+.form-card .subtitle {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">首頁</a></li>
+            <li class="breadcrumb-item active">首次登入</li>
+        </ol>
+    </nav>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="form-card">
+            <h2><i class="fas fa-user-edit me-2"></i>建立個人檔案</h2>
+            <p class="subtitle">請填寫以下資料以完成會員註冊</p>
+
+            <form method="post" novalidate>
+                {% csrf_token %}
+
+                <!-- 基本資訊 -->
+                <fieldset class="mb-4">
+                    <legend class="h6 text-primary border-bottom pb-1 mb-3">基本資訊</legend>
+
+                    <div class="mb-3">
+                        <label for="id_display_name" class="form-label">
+                            顯示暱稱 <span class="text-danger">*</span>
+                        </label>
+                        {{ form.display_name }}
+                        {% if form.display_name.errors %}
+                            <div class="text-danger small mt-1">{{ form.display_name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_student_no" class="form-label">學號</label>
+                        <div class="form-text mb-1">選填，可幫助賣家確認身份</div>
+                        {{ form.student_no }}
+                    </div>
+                </fieldset>
+
+                <!-- 學籍資訊 -->
+                <fieldset class="mb-4">
+                    <legend class="h6 text-primary border-bottom pb-1 mb-3">學籍資訊</legend>
+
+                    <div class="mb-3">
+                        <label for="id_program_type" class="form-label">
+                            學制 <span class="text-danger">*</span>
+                        </label>
+                        {{ form.program_type }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_department" class="form-label">
+                            系所 <span class="text-danger">*</span>
+                        </label>
+                        {{ form.department }}
+                        <div class="form-text">請先選擇學制</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_class_group" class="form-label">
+                            班級
+                        </label>
+                        {{ form.class_group }}
+                        <div class="form-text">請先選擇系所</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_grade_no" class="form-label">年級</label>
+                        {{ form.grade_no }}
+                    </div>
+                </fieldset>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <a href="{% url 'accounts:logout' %}" class="btn btn-outline-secondary">
+                        稍後再填
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4">
+                        <i class="fas fa-check me-1"></i>送出
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

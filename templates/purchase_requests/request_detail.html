@@ -1,0 +1,49 @@
+{% extends 'base.html' %}
+
+{% block title %}預約詳情 - 北商傳書{% endblock %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">首頁</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'purchase_requests:request_list' %}">預約請求</a></li>
+        <li class="breadcrumb-item active">#{{ purchase_request.id }}</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>預約請求 #{{ purchase_request.id }}</strong>
+                <span class="badge bg-secondary">{{ purchase_request.get_status_display }}</span>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>書籍：</strong>
+                    <a href="{% url 'listings:listing_detail' purchase_request.listing.id %}">
+                        {{ purchase_request.listing.book.title }}
+                    </a>
+                </div>
+                <div class="mb-3">
+                    <strong>價格：</strong> NT${{ purchase_request.listing.used_price }}
+                </div>
+                {% if purchase_request.buyer_message %}
+                    <div class="mb-3">
+                        <strong>買家留言：</strong>
+                        <p class="text-muted mb-0">{{ purchase_request.buyer_message }}</p>
+                    </div>
+                {% endif %}
+                <div class="mb-3">
+                    <strong>建立時間：</strong> {{ purchase_request.created_at|date:"Y/m/d H:i" }}
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'purchase_requests:request_list' %}" class="btn btn-outline-secondary btn-sm">
+                    返回列表
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
