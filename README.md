@@ -45,7 +45,7 @@
 | **前端** | HTML5 / Bootstrap 5 | 響應式網頁介面，採用 Bootstrap Grid 系統與元件庫建構各頁面 |
 | **前端互動** | JavaScript (原生) | DOM 操作、AJAX 非同步請求、表單驗證 |
 | **後端框架** | Django 5.x (MTV 架構) | Model-Template-View 設計模式，依業務功能拆分為 accounts、books、listings、requests、reports、notifications、core 等 App |
-| **認證機制** | Django Allauth + Google OAuth 2.0 | 校內帳號 OAuth 登入，整合 Cloudflare Turnstile 與 Google reCAPTCHA v3 進行人機驗證與風險評分 |
+| **認證機制** | Django Allauth + Google OAuth 2.0 | 校內帳號 OAuth 登入，整合 Cloudflare Turnstile 與 Google reCAPTCHA v3 進行人機驗證與風險評分。**W4 設計藍圖**：`/accounts/google/login/` 與 `/accounts/google/callback/` 目前僅列入藍圖，W4 第一波不實作真正的 OAuth 串接，只保留 URL 路由與流程設計；W5 以後再依實際需求選擇 allauth 或其他 OAuth 實作方案，並補上 `@ntub.edu.tw` 網域強制檢查邏輯。 |
 | **表單處理** | Django Forms / ModelForms | 伺服器端表單驗證，確保資料正確性 |
 | **後台管理** | Django Admin | 初期快速建置後台管理介面，後續視需求擴充自建儀表板 |
 | **API 層** | Django REST Framework (DRF) | 提供 RESTful API 端點，支援前期 Postman 測試與後期前端框架整合；(選用) JWT 權杖驗證 |
