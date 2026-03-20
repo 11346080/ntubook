@@ -1,6 +1,6 @@
+{% load static %}
 <!-- 共用 Modal 隱藏元件 -->
-
-<link rel="stylesheet" href="{{ url_for('static', filename='css/modals.css') }}">
+<link rel="stylesheet" href="{% static 'css/modals.css' %}">
 
 <!-- Modal 1: 送出預約請求 -->
 <div class="modal fade" id="reserveModal" tabindex="-1" aria-hidden="true">
@@ -281,4 +281,4 @@
 </div>
 
 <!-- JavaScript 函數 -->
-<script src="{{ url_for('static', filename='js/modals.js') }}"></script>
+<script src="{% static 'js/modals.js' %}"></script>
