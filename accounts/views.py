@@ -27,7 +27,7 @@ class FirstLoginView(LoginRequiredMixin, FormView):
 
     def dispatch(self, request, *args, **kwargs):
         if hasattr(request.user, 'profile'):
-            return redirect('accounts:login')
+            return redirect('/accounts/dashboard/')
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
