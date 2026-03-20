@@ -53,14 +53,6 @@ class ProgramType(models.Model):
 class Department(models.Model):
     """系所主檔 / Department"""
 
-    campus = models.ForeignKey(
-        Campus,
-        on_delete=models.SET_NULL,
-        blank=False,
-        null=True,
-        related_name='departments',
-        verbose_name='校區'
-    )
     program_type = models.ForeignKey(
         ProgramType,
         on_delete=models.CASCADE,
@@ -78,10 +70,10 @@ class Department(models.Model):
         db_table = 'departments'
         verbose_name = '系所'
         verbose_name_plural = '系所'
-        unique_together = [['campus', 'program_type', 'code']]
+        unique_together = [['program_type', 'code']]
         ordering = ['code']
         indexes = [
-            models.Index(fields=['campus', 'program_type', 'name_zh'], name='dept_campus_prog_name_idx'),
+            models.Index(fields=['program_type', 'name_zh'], name='dept_prog_name_idx'),
         ]
 
     def __str__(self):
@@ -91,6 +83,12 @@ class Department(models.Model):
 class ClassGroup(models.Model):
     """班級主檔 / Class Group"""
 
+    program_type = models.ForeignKey(
+        ProgramType,
+        on_delete=models.CASCADE,
+        related_name='class_groups',
+        verbose_name='學制'
+    )
     department = models.ForeignKey(
         Department,
         on_delete=models.CASCADE,
@@ -111,7 +109,7 @@ class ClassGroup(models.Model):
         verbose_name_plural = '班級'
         ordering = ['code']
         indexes = [
-            models.Index(fields=['department', 'grade_no'], name='class_dept_grade_idx'),
+            models.Index(fields=['program_type', 'department', 'grade_no'], name='class_prog_dept_grade_idx'),
             models.Index(fields=['department', 'grade_no', 'section_code'], name='class_dept_grade_sect_idx'),
         ]
 
