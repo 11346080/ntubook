@@ -57,12 +57,16 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['active_tab'] = self.request.GET.get('tab', 'profile')
-        user = self.request.user
-        try:
-            ctx['user_profile'] = user.profile
-        except UserProfile.DoesNotExist:
-            ctx['user_profile'] = None
-        ctx['unread_notification_count'] = 0  # TODO: 實作通知未讀數
+
+        user_profile = (
+            UserProfile.objects
+            .select_related('program_type', 'department', 'class_group')
+            .filter(user=self.request.user)
+            .first()
+        )
+
+        ctx['user_profile'] = user_profile
+        ctx['unread_notification_count'] = 0
         return ctx
 
 

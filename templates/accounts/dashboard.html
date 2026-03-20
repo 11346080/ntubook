@@ -134,6 +134,8 @@
          id="panel-profile" role="tabpanel">
         <div class="section-card">
             <h3><i class="fas fa-id-card me-2"></i>基本資料</h3>
+
+            {% if user_profile %}
             <div class="table-responsive">
                 <table class="table table-borderless mb-0">
                     <tbody>
@@ -147,15 +149,15 @@
                         </tr>
                         <tr>
                             <th class="text-muted">學制</th>
-                            <td>{{ user_profile.program_type.name_zh|default:'尚未設定' }}</td>
+                            <td>{% if user_profile.program_type %}{{ user_profile.program_type.name_zh }}{% else %}尚未設定{% endif %}</td>
                         </tr>
                         <tr>
                             <th class="text-muted">系所</th>
-                            <td>{{ user_profile.department.name_zh|default:'尚未設定' }}</td>
+                            <td>{% if user_profile.department %}{{ user_profile.department.name_zh }}{% else %}尚未設定{% endif %}</td>
                         </tr>
                         <tr>
                             <th class="text-muted">班級</th>
-                            <td>{{ user_profile.class_group.name_zh|default:'尚未設定' }}</td>
+                            <td>{% if user_profile.class_group %}{{ user_profile.class_group.name_zh }}{% else %}尚未設定{% endif %}</td>
                         </tr>
                         <tr>
                             <th class="text-muted">年級</th>
@@ -168,6 +170,16 @@
                     </tbody>
                 </table>
             </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-user-circle"></i>
+                <p>尚未填寫個人資料</p>
+                <a href="{% url 'accounts:first_login' %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-edit me-1"></i>立即填寫
+                </a>
+            </div>
+            {% endif %}
+
             <div class="mt-3">
                 <a href="{% url 'accounts:profile_edit' %}" class="btn btn-primary btn-sm">
                     <i class="fas fa-edit me-1"></i>編輯資料
