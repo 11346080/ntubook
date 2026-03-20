@@ -34,3 +34,16 @@ class FirstLoginView(LoginRequiredMixin, FormView):
         form.instance.user = self.request.user
         form.save()
         return super().form_valid(form)
+
+
+# =============================================================================
+# 會員 Dashboard（W4 最小骨架頁）
+# LoginRequiredMixin：未登入時自動 redirect 到 login
+# =============================================================================
+class DashboardView(LoginRequiredMixin, TemplateView):
+    template_name = 'accounts/dashboard.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['active_tab'] = self.request.GET.get('tab', 'profile')
+        return ctx
