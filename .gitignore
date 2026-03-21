@@ -7,19 +7,24 @@ __pycache__/
 *.mo
 *.pot
 *.log
+local_settings.py
+db.sqlite3
+backend/db.sqlite3
 
-# Django 使用者上傳的檔案
+# Django 使用者上傳的檔案 (Media)
 media/
 backend/media/
+/var/www/ntubook/backend/media/
 
-# Django 收集靜態檔的輸出目錄 
+# Django 收集靜態檔的輸出目錄 (Static Collect)
 staticfiles/
 backend/staticfiles/
 static_root/
 backend/static_root/
+/var/www/ntubook/backend/staticfiles/
 
 # =========================
-# ⚛️ Node.js 與 Next.js (Frontend)
+#  Node.js 與 Next.js (Frontend)
 # =========================
 node_modules/
 frontend/node_modules/
@@ -31,6 +36,7 @@ dist/
 .npm
 .eslintcache
 .vercel/
+*.tsbuildinfo
 
 # Node 日誌檔
 npm-debug.log*
@@ -39,27 +45,40 @@ yarn-error.log*
 pnpm-debug.log*
 
 # =========================
+#  Nginx 與 生產環境工具
+# =========================
+*.access.log
+*.error.log
+/var/log/nginx/*
+
+# Gunicorn / PID 暫存檔
+*.pid
+*.sock
+
+# =========================
 #  虛擬環境
 # =========================
 venv/
 .venv/
 env/
 *.env/
+bin/
+include/
+lib/
+share/
 
 # =========================
-#  本機資料庫
-# =========================
-db.sqlite3
-backend/db.sqlite3
-
-# =========================
-#  機密資訊與憑證 (絕對不能上傳！)
+#  機密資訊與憑證
 # =========================
 .env
 .env.*
 !.env.example
 *.pem
-ca.pem
+*.key
+*.crt
+*.csr
+*.p12
+/etc/letsencrypt/
 
 # =========================
 #  編輯器、系統設定與快取
@@ -67,5 +86,12 @@ ca.pem
 .vscode/
 .idea/
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
+ehthumbs.db
 *.swp
+*.swo
+
