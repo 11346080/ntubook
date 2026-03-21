@@ -1,9 +1,8 @@
-name: NTUBook Auto Deploy
+name: NTUBook Test Auto Deploy
 
 on:
   push:
     branches:
-      - main
       - dev
 
 jobs:
@@ -23,24 +22,12 @@ jobs:
           script: |
             set -e
 
-            BRANCH="${{ github.ref_name }}"
+            TARGET_DIR="/var/www/ntubook_dev"
+            FRONTEND_PORT="3000"
+            BACKEND_PORT="8000"
+            PM2_NAME="ntubook-next"
 
-            if [ "$BRANCH" = "main" ]; then
-              TARGET_DIR="/var/www/ntubook"
-              FRONTEND_PORT="3000"
-              BACKEND_PORT="8000"
-              PM2_NAME="ntubook-next-main"
-            elif [ "$BRANCH" = "dev" ]; then
-              TARGET_DIR="/var/www/ntubook_dev"
-              FRONTEND_PORT="3001"
-              BACKEND_PORT="8001"
-              PM2_NAME="ntubook-next-dev"
-            else
-              echo "Unsupported branch: $BRANCH"
-              exit 1
-            fi
-
-            echo "=== Deploy branch: $BRANCH ==="
+            echo "=== Deploy test site ==="
             echo "TARGET_DIR=$TARGET_DIR"
             echo "FRONTEND_PORT=$FRONTEND_PORT"
             echo "BACKEND_PORT=$BACKEND_PORT"
@@ -49,8 +36,9 @@ jobs:
             cd "$TARGET_DIR"
 
             echo "=== Git update ==="
-            git fetch origin "$BRANCH"
-            git reset --hard "origin/$BRANCH"
+            git fetch origin dev
+            git reset --hard origin/dev
+            git clean -fd
 
             echo "=== Backend env check ==="
             if [ ! -f "$TARGET_DIR/backend/.env" ]; then
@@ -63,34 +51,36 @@ jobs:
             fi
 
             echo "=== Python deps ==="
-            cd "$TARGET_DIR/backend"
-            source "$TARGET_DIR/venv/bin/activate"
-            pip install -r "$TARGET_DIR/requirements.txt"
+            "$TARGET_DIR/venv/bin/pip" install -r "$TARGET_DIR/requirements.txt"
 
-            echo "=== Django migrate / collectstatic ==="
-            python manage.py check
-            python manage.py migrate
-            python manage.py collectstatic --noinput
+            echo "=== Django check / migrate / collectstatic ==="
+            cd "$TARGET_DIR/backend"
+            "$TARGET_DIR/venv/bin/python" manage.py check
+            "$TARGET_DIR/venv/bin/python" manage.py migrate
+            "$TARGET_DIR/venv/bin/python" manage.py collectstatic --noinput
 
             echo "=== Restart gunicorn ==="
-            pkill -f "gunicorn ntub_usedbooks.wsgi:application --bind 127.0.0.1:$BACKEND_PORT" || true
+            pkill -f "gunicorn ntub_usedbooks.wsgi:application" || true
 
             nohup "$TARGET_DIR/venv/bin/gunicorn" ntub_usedbooks.wsgi:application \
               --bind 127.0.0.1:$BACKEND_PORT \
               --workers 3 \
               > "$TARGET_DIR/backend/gunicorn.log" 2>&1 &
 
-            sleep 3
+            sleep 5
             curl -I "http://127.0.0.1:$BACKEND_PORT"
 
             echo "=== Frontend build ==="
             cd "$TARGET_DIR/frontend"
-            npm install
+            npm ci
             npm run build
 
             echo "=== Restart Next.js with PM2 ==="
             pm2 delete "$PM2_NAME" || true
-            PORT="$FRONTEND_PORT" pm2 start npm --name "$PM2_NAME" -- start
+            pm2 start npm \
+              --name "$PM2_NAME" \
+              --cwd "$TARGET_DIR/frontend" \
+              -- start -- --port "$FRONTEND_PORT"
             pm2 save
 
             sleep 5
@@ -100,6 +90,9 @@ jobs:
             sudo nginx -t
             sudo systemctl reload nginx
 
-            echo "=== Health check ==="
+            echo "=== Health checks ==="
             curl -I http://127.0.0.1
+            curl -I -H "Host: test.ntubook.com" http://127.0.0.1
+            curl -I -H "Host: test.ntubook.com" http://127.0.0.1/admin/
+
             echo "=== Deploy finished successfully ==="
