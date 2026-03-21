@@ -102,7 +102,7 @@ export default function Navbar({ initialAuth, unreadNotifications = 0 }: NavbarP
                 </button>
               ) : (
                 <Link 
-                  href="/login" 
+                  href="accounts/login/" 
                   className="btn btn-primary btn-sm rounded-pill px-4 shadow-sm text-white"
                   onClick={handleLinkClick}
                 >
