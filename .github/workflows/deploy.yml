@@ -1,45 +1,105 @@
-name: Django CI/CD Deploy
+name: NTUBook Auto Deploy
 
 on:
   push:
-    branches: 
+    branches:
       - main
       - dev
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: SSH to GCP VM and Deploy
+      - name: Deploy to GCP VM
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.GCP_IP }}
           username: ${{ secrets.GCP_USER }}
           key: ${{ secrets.GCP_SSH_KEY }}
           port: 22
-          debug: true
           script_stop: true
+          debug: true
           script: |
-            whoami
-            echo $HOME
-            hostname
-      
-            if [ "${{ github.ref_name }}" = "main" ]; then
+            set -e
+
+            BRANCH="${{ github.ref_name }}"
+
+            if [ "$BRANCH" = "main" ]; then
               TARGET_DIR="/var/www/ntubook"
-            elif [ "${{ github.ref_name }}" = "dev" ]; then
+              FRONTEND_PORT="3000"
+              BACKEND_PORT="8000"
+              PM2_NAME="ntubook-next-main"
+            elif [ "$BRANCH" = "dev" ]; then
               TARGET_DIR="/var/www/ntubook_dev"
+              FRONTEND_PORT="3001"
+              BACKEND_PORT="8001"
+              PM2_NAME="ntubook-next-dev"
             else
-              echo "Unsupported branch: ${{ github.ref_name }}"
+              echo "Unsupported branch: $BRANCH"
               exit 1
             fi
-      
-            echo "準備部署分支: ${{ github.ref_name }} 到路徑: $TARGET_DIR"
+
+            echo "=== Deploy branch: $BRANCH ==="
+            echo "TARGET_DIR=$TARGET_DIR"
+            echo "FRONTEND_PORT=$FRONTEND_PORT"
+            echo "BACKEND_PORT=$BACKEND_PORT"
+            echo "PM2_NAME=$PM2_NAME"
+
             cd "$TARGET_DIR"
-      
-            git fetch origin "${{ github.ref_name }}"
-            git reset --hard "origin/${{ github.ref_name }}"
-      
-            touch ntub_usedbooks/wsgi.py
-            echo "部署完成！"
-            
-            echo "部署完成！"
+
+            echo "=== Git update ==="
+            git fetch origin "$BRANCH"
+            git reset --hard "origin/$BRANCH"
+
+            echo "=== Backend env check ==="
+            if [ ! -f "$TARGET_DIR/backend/.env" ]; then
+              if [ -f "$TARGET_DIR/.env" ]; then
+                cp "$TARGET_DIR/.env" "$TARGET_DIR/backend/.env"
+              else
+                echo "ERROR: backend/.env and root .env both missing"
+                exit 1
+              fi
+            fi
+
+            echo "=== Python deps ==="
+            cd "$TARGET_DIR/backend"
+            source "$TARGET_DIR/venv/bin/activate"
+            pip install -r "$TARGET_DIR/requirements.txt"
+
+            echo "=== Django migrate / collectstatic ==="
+            python manage.py check
+            python manage.py migrate
+            python manage.py collectstatic --noinput
+
+            echo "=== Restart gunicorn ==="
+            pkill -f "gunicorn ntub_usedbooks.wsgi:application --bind 127.0.0.1:$BACKEND_PORT" || true
+
+            nohup "$TARGET_DIR/venv/bin/gunicorn" ntub_usedbooks.wsgi:application \
+              --bind 127.0.0.1:$BACKEND_PORT \
+              --workers 3 \
+              > "$TARGET_DIR/backend/gunicorn.log" 2>&1 &
+
+            sleep 3
+            curl -I "http://127.0.0.1:$BACKEND_PORT"
+
+            echo "=== Frontend build ==="
+            cd "$TARGET_DIR/frontend"
+            npm install
+            npm run build
+
+            echo "=== Restart Next.js with PM2 ==="
+            pm2 delete "$PM2_NAME" || true
+            PORT="$FRONTEND_PORT" pm2 start npm --name "$PM2_NAME" -- start
+            pm2 save
+
+            sleep 5
+            curl -I "http://127.0.0.1:$FRONTEND_PORT"
+
+            echo "=== Reload nginx ==="
+            sudo nginx -t
+            sudo systemctl reload nginx
+
+            echo "=== Health check ==="
+            curl -I http://127.0.0.1
+            echo "=== Deploy finished successfully ==="
