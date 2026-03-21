@@ -1,0 +1,42 @@
+.footer {
+  margin-top: auto;
+}
+
+.brandSection h5 {
+  transition: all var(--transition-duration) ease;
+}
+
+.brandSection:hover h5 {
+  opacity: 0.8;
+}
+
+.linkList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.footerLink {
+  transition: all var(--transition-duration) ease;
+  position: relative;
+  display: inline-block;
+}
+
+.footerLink:hover {
+  color: var(--color-seal) !important;
+  padding-left: 0.5rem;
+}
+
+.footerBottom {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .footerBottom {
+    justify-content: center;
+  }
+}

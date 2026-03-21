@@ -1,0 +1,230 @@
+/* homepage.css */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;400;500;700&family=Ma+Shan+Zheng&display=swap');
+
+:root {
+  --ink: #1e140a;
+  --ink-light: #3d2b1a;
+  --paper: #f5edd8;
+  --seal-red: #9b2335;
+  --muted: #8c7355;
+}
+
+/* 基礎佈局優化 */
+.homepage-body-override {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* 針對 Next.js 可能的 layout 限制進行覆蓋 */
+main.flex-shrink-0 { margin-top: 0 !important; }
+main.flex-shrink-0 > .container { padding: 0 !important; max-width: 100% !important; }
+
+.paper-bg {
+  background-color: rgba(245, 237, 216, 0.75); /* 稍微調高透明度至 0.75 */
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.paper-bg::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(160,130,80,0.025) 3px, rgba(160,130,80,0.025) 4px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ink-frame { position: fixed; inset: 18px; border: 1.5px solid rgba(80,55,25,0.18); pointer-events: none; z-index: 5; }
+.ink-frame::before { content: ''; position: absolute; inset: 4px; border: 1px solid rgba(80,55,25,0.08); }
+
+.corner { position: fixed; width: 40px; height: 40px; z-index: 6; pointer-events: none; }
+.corner-tl { top: 12px; left: 12px; border-top: 2px solid rgba(80,55,25,0.3); border-left: 2px solid rgba(80,55,25,0.3); }
+.corner-tr { top: 12px; right: 12px; border-top: 2px solid rgba(80,55,25,0.3); border-right: 2px solid rgba(80,55,25,0.3); }
+.corner-bl { bottom: 12px; left: 12px; border-bottom: 2px solid rgba(80,55,25,0.3); border-left: 2px solid rgba(80,55,25,0.3); }
+.corner-br { bottom: 12px; right: 12px; border-bottom: 2px solid rgba(80,55,25,0.3); border-right: 2px solid rgba(80,55,25,0.3); }
+
+.seal {
+  font-family: 'Ma Shan Zheng', 'Noto Serif TC', serif;
+  font-size: 11px;
+  color: var(--seal-red);
+  border: 1.5px solid var(--seal-red);
+  padding: 5px 7px;
+  letter-spacing: 2px;
+  writing-mode: vertical-rl;
+  line-height: 1;
+  opacity: 0.75;
+  user-select: none;
+}
+
+.intro-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  pointer-events: none;
+  background: var(--paper);
+  transition: opacity 1s ease 1.6s;
+}
+
+.intro-overlay.fade-out { opacity: 0; }
+
+.intro-logo-img {
+  transition: transform 1.1s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.1s ease;
+  opacity: 1;
+}
+
+.intro-logo-img.shrink {
+  transform: scale(0.5) translateY(-100px);
+  opacity: 0;
+}
+
+.main-content {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.95s ease 0.1s, transform 0.95s ease 0.1s;
+  position: relative;
+  text-shadow: 0 0 15px rgba(245, 237, 216, 0.8);
+  z-index: 10;
+}
+
+.main-content.visible { opacity: 1; transform: translateY(0); }
+
+.ink-input {
+  background: rgba(255,255,255,0.42);
+  border: 1px solid rgba(80,55,25,0.28);
+  border-radius: 2px;
+  color: var(--ink);
+  font-family: 'Noto Serif TC', serif;
+  font-size: 15px;
+  padding: 12px 18px;
+  width: 100%;
+  outline: none;
+  backdrop-filter: blur(4px);
+  transition: border-color 0.25s, box-shadow 0.25s, background 0.25s;
+  letter-spacing: 0.04em;
+  box-sizing: border-box;
+}
+
+.ink-input::placeholder { color: var(--muted); opacity: 0.75; }
+.ink-input:focus { border-color: rgba(80,55,25,0.55); box-shadow: 0 2px 12px rgba(30,20,10,0.08); background: rgba(255,255,255,0.62); }
+
+.ink-select {
+  background: rgba(255,255,255,0.42) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238c7355' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 12px center / 12px;
+  border: 1px solid rgba(80,55,25,0.28);
+  border-radius: 2px;
+  color: var(--ink);
+  font-family: 'Noto Serif TC', serif;
+  font-size: 14px;
+  padding: 10px 36px 10px 12px;
+  outline: none;
+  backdrop-filter: blur(4px);
+  transition: border-color 0.25s, background-color 0.25s;
+  cursor: pointer;
+  flex: 1;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.ink-select:focus { border-color: rgba(80,55,25,0.55); background-color: rgba(255,255,255,0.62); }
+.ink-select option { background: #f5edd8; color: var(--ink); }
+
+.search-btn {
+  background: var(--ink);
+  color: var(--paper);
+  border: none;
+  border-radius: 2px;
+  font-family: 'Noto Serif TC', serif;
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  padding: 12px 26px;
+  cursor: pointer;
+  transition: background 0.2s, letter-spacing 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.search-btn:hover { background: var(--ink-light); letter-spacing: 0.2em; }
+
+.post-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--seal-red);
+  border: 1.5px solid var(--seal-red);
+  background: transparent;
+  border-radius: 2px;
+  font-family: 'Noto Serif TC', serif;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  padding: 9px 24px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.post-btn:hover { background: var(--seal-red); color: var(--paper); }
+
+.browse-link {
+  font-family: 'Noto Serif TC', serif;
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.15em;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(140,115,85,0.35);
+  padding-bottom: 2px;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.browse-link:hover { color: var(--ink); border-color: rgba(30,20,10,0.5); }
+
+.ink-divider {
+  width: 60px;
+  height: 1px;
+  background: linear-gradient(to right, transparent, rgba(80,55,25,0.35), transparent);
+  margin: 0 auto;
+}
+
+.side-text {
+  position: fixed;
+  writing-mode: vertical-rl;
+  font-family: 'Noto Serif TC', serif;
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: rgba(80,55,25,0.38);
+  user-select: none;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.side-text-left { left: 32px; bottom: 60px; }
+.side-text-right { right: 32px; top: 60px; }
+
+#ink-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1; /* 降到 1 */
+}
+
+@keyframes float-down {
+  0%, 100% { transform: translateY(0); opacity: 0.45; }
+  50% { transform: translateY(6px); opacity: 0.9; }
+}
+
+.scroll-hint {
+  animation: float-down 2.2s ease-in-out infinite;
+  font-family: 'Noto Serif TC', serif;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.22em;
+}
+
+@media (max-width: 640px) {
+  .side-text { display: none; }
+  .corner { width: 26px; height: 26px; }
+  .ink-frame { inset: 10px; }
+}

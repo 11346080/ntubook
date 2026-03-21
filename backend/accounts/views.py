@@ -3,8 +3,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.views import LogoutView
 from django.contrib.auth import logout
 from django.shortcuts import redirect
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from .forms import UserProfileForm
 from .serializers import UserProfileSerializer
@@ -99,9 +100,19 @@ class ProfileUpdateView(LoginRequiredMixin, UpdateView):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def userprofile_list_api(request):
-    """取得所有使用者檔案的 JSON API 端點 / Get all user profiles API endpoint"""
-    profiles = UserProfile.objects.all()
+    """
+    取得使用者檔案的 JSON API 端點 / Get user profiles API endpoint
+    僅限已登入使用者 / Authentication required
+    """
+    # Users can only see their own profile in list view
+    # or all profiles if they're admin
+    if request.user.is_staff:
+        profiles = UserProfile.objects.all()
+    else:
+        profiles = UserProfile.objects.filter(user=request.user)
+    
     serializer = UserProfileSerializer(profiles, many=True)
     return Response(serializer.data)
 

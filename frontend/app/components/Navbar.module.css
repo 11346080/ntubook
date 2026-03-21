@@ -1,0 +1,91 @@
+.navbar {
+  transition: all var(--transition-duration) ease;
+  z-index: 999;
+}
+
+.logo {
+  font-size: 18px;
+  font-family: 'Noto Serif TC', serif;
+  transition: all var(--transition-duration) ease;
+}
+
+.logo:hover {
+  opacity: 0.8;
+}
+
+.toggler {
+  border: none;
+  outline: none;
+}
+
+.toggler:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.searchForm {
+  margin: 0 2rem;
+}
+
+@media (max-width: 991px) {
+  .searchForm {
+    margin: 1rem 0;
+    max-width: 100% !important;
+  }
+}
+
+.searchInput {
+  transition: all var(--transition-duration) ease;
+  color: var(--color-text-primary);
+}
+
+.searchInput::placeholder {
+  color: var(--color-muted);
+}
+
+.searchInput:focus {
+  background-color: var(--color-bg-light) !important;
+  border-color: var(--color-seal) !important;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(155, 35, 53, 0.1);
+}
+
+.searchBtn {
+  transition: all var(--transition-duration) ease;
+}
+
+.searchBtn:hover {
+  color: var(--color-seal) !important;
+}
+
+.navLink {
+  transition: all var(--transition-duration) ease;
+  position: relative;
+  text-decoration: none;
+}
+
+.navLink::after {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 2px;
+  bottom: 0;
+  left: 50%;
+  background-color: var(--color-seal);
+  transition: all var(--transition-duration) ease;
+  transform: translateX(-50%);
+}
+
+.navLink:hover::after {
+  width: calc(100% - 1.5rem);
+}
+
+.notificationBell {
+  color: var(--color-text-primary) !important;
+  text-decoration: none;
+  transition: all var(--transition-duration) ease;
+}
+
+.notificationBell:hover {
+  color: var(--color-seal) !important;
+}

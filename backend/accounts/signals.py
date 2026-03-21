@@ -5,6 +5,17 @@ from django.contrib.auth import get_user_model
 from .models import User, UserProfile
 from notifications.models import Notification
 
+# Allauth signals - 條件導入，只在可用時才註冊 receiver
+ALLAUTH_AVAILABLE = False
+pre_social_login = None
+post_social_login = None
+
+try:
+    from allauth.socialaccount.signals import pre_social_login, post_social_login
+    ALLAUTH_AVAILABLE = True
+except ImportError:
+    pass
+
 User = get_user_model()
 
 
@@ -75,3 +86,55 @@ def notify_user_account_status_change(sender, instance, created, **kwargs):
         title=title,
         defaults={'message': message},
     )
+
+
+# ========== Allauth Integration Signals ==========
+# 只在 allauth 可用時才註冊信號处理器
+
+if ALLAUTH_AVAILABLE and pre_social_login is not None:
+    @receiver(pre_social_login)
+    def check_ntub_email(sender, request, sociallogin, **kwargs):
+        """
+        在社交登入前檢查是否為 @ntub.edu.tw 帳號。
+        (可選：若要嚴格限制，可在此 raise 異常)
+        """
+        email = sociallogin.email_address or sociallogin.account.extra_data.get('email', '')
+        if email and not email.endswith('@ntub.edu.tw'):
+            # 可選：記錄警告，但不中斷流程
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Non-NTUB email attempting login: {email}")
+            # 若要拒絕，可以 raise ValidationError
+            # from django.core.exceptions import ValidationError
+            # raise ValidationError(f"Only @ntub.edu.tw accounts are allowed. Got: {email}")
+
+
+if ALLAUTH_AVAILABLE and post_social_login is not None:
+    @receiver(post_social_login)
+    def link_to_local_user_if_exists(sender, request, sociallogin, **kwargs):
+        """
+        社交登入後的額外處理。
+        在此階段可能需要額外的邏輯，但主要邏輯在 adapter 中已經處理。
+        """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        try:
+            user = sociallogin.user
+            email = sociallogin.email_address or user.email
+            
+            logger.info(
+                f"Social login completed for user {user.username} with email {email}"
+            )
+            
+            # 驗證 UserProfile 是否已更新
+            if hasattr(user, 'profile'):
+                profile = user.profile
+                logger.info(
+                    f"UserProfile details: student_no={profile.student_no}, "
+                    f"grade_no={profile.grade_no}, "
+                    f"department={profile.department}"
+                )
+        
+        except Exception as e:
+            logger.error(f"Exception in post_social_login: {str(e)}", exc_info=True)

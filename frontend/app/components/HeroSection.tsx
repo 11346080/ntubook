@@ -73,7 +73,7 @@ export default function HeroSection({ isAuthenticated = false }: HeroSectionProp
             <i className="fas fa-search"></i>瀏覽書籍
           </Link>
           <Link
-            href={isAuthenticated ? '/listings/create' : '/accounts/login'}
+            href="/accounts/login"
             style={{
               padding: '0.75rem 1.5rem',
               backgroundColor: 'transparent',

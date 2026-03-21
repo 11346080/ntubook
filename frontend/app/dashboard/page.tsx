@@ -171,7 +171,7 @@ export default function DashboardPage() {
         {activeTab === 'listings' && (
           <div className="form-section">
             <h5><i className="fas fa-book"></i> 我的刊登</h5>
-            <p className="text-muted">暫無刊登。<a href="#">建立新刊登</a></p>
+            <p className="text-muted">暫無刊登。<a href="/listings">瀏覽所有書籍</a></p>
           </div>
         )}
 

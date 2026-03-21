@@ -2,12 +2,13 @@ from django.views.generic import ListView, DetailView, CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 
 from .models import Listing
 from .forms import ListingCreateForm
-from .serializers import ListingSerializer
+from .serializers import ListingSerializer, ListingLatestSerializer
 
 
 class ListingListView(ListView):
@@ -98,9 +99,88 @@ class ListingCreateView(LoginRequiredMixin, CreateView):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
 def listing_list_api(request):
-    """取得所有刊登的 JSON API 端點 / Get all listings API endpoint"""
-    listings = Listing.objects.all()
+    """
+    取得所有刊登的 JSON API 端點 / Get all listings API endpoint
+    公開存取 / Public access
+    只顯示活躍的刊登 / Shows only active listings
+    """
+    # Filter only active, non-deleted listings
+    listings = Listing.objects.filter(
+        status=Listing.Status.AVAILABLE,
+        deleted_at__isnull=True
+    ).select_related(
+        'book',
+        'seller',
+        'origin_class_group__department'
+    ).prefetch_related('images')
+    
     serializer = ListingSerializer(listings, many=True)
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def latest_listings_api(request):
+    """
+    取得最新 6 筆刊登的 JSON API 端點 / Get latest 6 listings API endpoint
+    用於首頁展示 / For homepage display
+    
+    Query Parameters (可選):
+    - count: 返回筆數，預設 6 (最多 20)
+    
+    Response:
+    {
+        "success": true,
+        "data": [
+            {
+                "id": 1,
+                "book_title": "書名",
+                "book_author": "作者",
+                "cover_image_url": "URL",
+                "used_price": 100.00,
+                "condition_level": "GOOD",
+                "seller_display_name": "賣家",
+                "seller_department": "系所",
+                "created_at": "ISO datetime",
+                "primary_image": {...}
+            }
+        ]
+    }
+    """
+    try:
+        # 獲取請求參數
+        count = int(request.GET.get('count', 6))
+        count = min(count, 20)  # 最多 20 筆，防止 DoS
+        
+        # 查詢：最新的、可購買的、未刪除的刊登
+        listings = Listing.objects.filter(
+            status=Listing.Status.AVAILABLE,
+            deleted_at__isnull=True
+        ).select_related(
+            'book',                              # Listing -> Book (ForeignKey)
+            'seller',                            # Listing -> User (ForeignKey)
+            'seller__profile',                   # User -> UserProfile (OneToOne)
+            'seller__profile__department'        # UserProfile -> Department (ForeignKey)
+        ).prefetch_related(
+            'images'                             # Listing -> ListingImage (Reverse)
+        ).order_by('-created_at')[:count]
+        
+        serializer = ListingLatestSerializer(listings, many=True)
+        
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'count': len(serializer.data)
+        })
+    
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'FETCH_ERROR',
+                'message': f'無法載入最新書籍: {str(e)}'
+            }
+        }, status=400)
 

@@ -16,7 +16,7 @@ interface Listing {
 
 export default function ListingCard({ listing }: { listing: Listing }) {
   return (
-    <Link href={`/listings/${listing.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+    <Link href="/listings" style={{ textDecoration: 'none', color: 'inherit' }}>
       <div
         style={{
           border: '1px solid #e9ecef',

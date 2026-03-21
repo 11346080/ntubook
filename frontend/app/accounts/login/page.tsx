@@ -47,7 +47,9 @@ export default function LoginPage() {
         alert('登入成功！(模擬)');
         setLoading(false);
       }, 1000);
-    } catch (err) {      console.error('登入出错:', err);      setError('登入失敗，請檢查帳號密碼');
+    } catch (err) {
+      console.error('登入出错:', err);
+      setError('登入失敗，請檢查帳號密碼');
       setLoading(false);
     }
   };

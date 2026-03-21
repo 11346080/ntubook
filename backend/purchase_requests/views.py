@@ -3,8 +3,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from django.utils import timezone
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 
 from .models import PurchaseRequest
 from .serializers import PurchaseRequestSerializer
@@ -139,8 +140,26 @@ def cancel_request(request, pk):
 
 
 # ================= API Views =================
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def purchaserequest_list_api(request):
-    """取得所有預約請求的 JSON API 端點 / Get all purchase requests API endpoint"""
-    requests = PurchaseRequest.objects.all()
+    """
+    取得預約請求的 JSON API 端點 / Get purchase requests API endpoint
+    僅限已登入使用者 / Authentication required
+    
+    用户只能看到自己的请求（作为买家或卖家）
+    Admin可以看到所有请求
+    """
+    if request.user.is_staff:
+        # Admin can see all requests
+        requests = PurchaseRequest.objects.all()
+    else:
+        # Regular users can only see their own requests
+        requests = PurchaseRequest.objects.filter(
+            buyer=request.user
+        ) | PurchaseRequest.objects.filter(
+            listing__seller=request.user
+        )
+    
     serializer = PurchaseRequestSerializer(requests, many=True)
     return Response(serializer.data)

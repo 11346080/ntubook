@@ -51,8 +51,19 @@ class ProgramType(models.Model):
 
 
 class Department(models.Model):
-    """系所主檔 / Department"""
+    """系所主檔 / Department
+    
+    業務鍵為 (campus, program_type, code) 三者組合，實現 4 層正規化架構。
+    """
 
+    campus = models.ForeignKey(
+        Campus,
+        on_delete=models.CASCADE,
+        related_name='departments',
+        verbose_name='校區',
+        null=True,
+        blank=True
+    )
     program_type = models.ForeignKey(
         ProgramType,
         on_delete=models.CASCADE,
@@ -70,14 +81,17 @@ class Department(models.Model):
         db_table = 'departments'
         verbose_name = '系所'
         verbose_name_plural = '系所'
-        unique_together = [['program_type', 'code']]
-        ordering = ['code']
+        unique_together = [['campus', 'program_type', 'code']]
+        ordering = ['campus__code', 'code']
         indexes = [
-            models.Index(fields=['program_type', 'name_zh'], name='dept_prog_name_idx'),
+            models.Index(fields=['campus', 'program_type', 'name_zh'], name='dept_campus_prog_name_idx'),
+            models.Index(fields=['is_active', 'campus', 'program_type'], name='dept_active_campus_prog_idx'),
         ]
 
     def __str__(self):
-        return f"{self.code} - {self.name_zh}"
+        """優雅地處理 campus 為 None 的情況"""
+        campus_name = self.campus.name_zh if self.campus else '未指定校區'
+        return f"{campus_name} - {self.code} - {self.name_zh}"
 
 
 class ClassGroup(models.Model):
