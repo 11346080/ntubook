@@ -543,7 +543,7 @@ export default function HomePage() {
         <div className={`intro-overlay ${introPhase === 'expand' ? 'fade-out' : ''}`}>
           <Image
             className={`intro-logo-img ${introPhase === 'expand' ? 'shrink' : ''}`}
-            src="/images/Logo.jpg"
+            src="/images/Logo.png"
             alt="北商傳書"
             width={300}
             height={220}
@@ -577,7 +577,7 @@ export default function HomePage() {
           style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: '640px' }}
         >
           <Image
-            src="/images/Logo.jpg"
+            src="/images/Logo.png"
             alt="北商傳書"
             width={400}
             height={260}
