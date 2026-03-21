@@ -2,15 +2,15 @@
 
 /* ===== CSS Variables / 色彩系統 ===== */
 :root {
-    --primary-color: #1A365D;
+    --primary-color: #0d6efd;
     --accent-color: #E67E22;
-    --bg-light: #F8FAFC;
-    --text-primary: #1E293B;
-    --text-secondary: #475569;
+    --bg-light: #f8f9fa;
+    --text-primary: #1a1a1a;
+    --text-secondary: #6c757d;
     --success-color: #10B981;
     --warning-color: #F59E0B;
     --danger-color: #EF4444;
-    --border-light: #E2E8F0;
+    --border-light: #e9ecef;
 }
 
 * {
@@ -24,7 +24,7 @@ html, body {
 }
 
 body {
-    background-color: var(--bg-light);
+    background-color: #ffffff;
     color: var(--text-primary);
     line-height: 1.6;
     display: flex;
@@ -55,32 +55,31 @@ main {
 
 .navbar-brand {
     font-size: 1.25rem;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--primary-color) !important;
     letter-spacing: -0.5px;
 }
 
 .navbar-brand:hover {
-    color: var(--accent-color) !important;
+    color: #0a58ca !important;
     transition: color 0.3s ease;
 }
 
 .search-box {
-    max-width: 400px;
-    border: 1px solid var(--border-light);
-    border-radius: 24px;
-    padding: 0.5rem 1rem;
-    background-color: var(--bg-light);
+    max-width: 300px;
     display: flex;
     align-items: center;
+    gap: 0;
 }
 
 .search-box input {
-    border: none;
-    background-color: transparent;
+    border: 1px solid var(--border-light);
+    background-color: #ffffff;
     outline: none;
     width: 100%;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.25rem 0 0 0.25rem;
 }
 
 .search-box input::placeholder {
@@ -88,26 +87,27 @@ main {
 }
 
 .search-box .btn-search {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
+    background: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    color: white;
     cursor: pointer;
-    padding: 0;
-    margin-left: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0 0.25rem 0.25rem 0;
 }
 
 .search-box .btn-search:hover {
-    color: var(--accent-color);
+    background: #0a58ca;
 }
 
 .navbar-nav .nav-link {
     color: var(--text-primary) !important;
-    font-weight: 500;
+    font-weight: 400;
     margin: 0 0.5rem;
+    font-size: 0.95rem;
 }
 
 .navbar-nav .nav-link:hover {
-    color: var(--accent-color) !important;
+    color: var(--primary-color) !important;
     transition: color 0.2s ease;
 }
 
@@ -131,18 +131,130 @@ main {
     font-weight: 700;
 }
 
-.btn-logout {
-    background-color: var(--accent-color);
-    color: white !important;
-    border: none;
-    border-radius: 6px;
-    padding: 0.5rem 1rem;
+.btn-outline-secondary {
+    color: var(--text-secondary);
+    border-color: var(--text-secondary);
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--text-secondary);
+    border-color: var(--text-secondary);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: #0a58ca;
+    border-color: #0a58ca;
+}
+
+/* ===== Hero Section ===== */
+.hero-section {
+    background: linear-gradient(135deg, #0d6efd 0%, #0d6efd99 100%);
+    color: white;
+    padding: 4rem 0;
+    border-radius: 0.75rem;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.hero-section h1 {
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.hero-section p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+/* ===== Book Card ===== */
+.book-card {
+    border: 1px solid var(--border-light);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+    background: white;
+    cursor: pointer;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.book-card:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1);
+}
+
+.book-card-img {
+    height: 180px;
+    background: var(--bg-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #adb5bd;
+    font-size: 3rem;
+}
+
+.book-card-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.book-card-body {
+    padding: 1rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.book-card-title {
+    font-size: 0.95rem;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-primary);
+}
+
+.book-card-author {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.book-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+}
+
+.book-card-price {
+    color: var(--primary-color);
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.book-card-condition {
+    background: var(--text-secondary);
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
     font-weight: 500;
 }
 
-.btn-logout:hover {
-    background-color: #d66f1f;
-    color: white !important;
+/* ===== Section Title ===== */
+.section-title {
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid var(--primary-color);
+    padding-left: 0.75rem;
+    font-size: 1.5rem;
 }
 
 /* ===== Footer ===== */
@@ -172,7 +284,7 @@ footer a {
 }
 
 footer a:hover {
-    color: var(--accent-color);
+    color: var(--primary-color);
     transition: color 0.2s ease;
 }
 
@@ -190,12 +302,28 @@ footer a:hover {
     font-weight: 700;
     margin-bottom: 1rem;
     font-size: 1rem;
-    border-bottom: 2px solid var(--accent-color);
+    border-bottom: 2px solid var(--primary-color);
     padding-bottom: 0.5rem;
 }
 
 .filter-group {
     margin-bottom: 1.5rem;
+}
+
+/* ===== Responsive Grid ===== */
+@media (max-width: 768px) {
+    .search-box {
+        max-width: 100%;
+        margin: 1rem 0;
+    }
+
+    .hero-section {
+        padding: 2rem 0;
+    }
+
+    .hero-section h1 {
+        font-size: 1.75rem;
+    }
 }
 
 .filter-group label {
