@@ -1,4 +1,4 @@
-name: NTUBook Auto Deploy
+name: NTUBook Test Auto Deploy
 
 on:
   push:
@@ -17,7 +17,6 @@ jobs:
           username: ${{ secrets.GCP_USER }}
           key: ${{ secrets.GCP_SSH_KEY }}
           port: 22
-          script_stop: true
           debug: true
           script: |
             set -e
@@ -27,8 +26,11 @@ jobs:
             BACKEND_PORT="8000"
             PM2_NAME="ntubook-next"
 
-            echo "=== Deploy dev only ==="
+            echo "=== Deploy test site ==="
             echo "TARGET_DIR=$TARGET_DIR"
+            echo "FRONTEND_PORT=$FRONTEND_PORT"
+            echo "BACKEND_PORT=$BACKEND_PORT"
+            echo "PM2_NAME=$PM2_NAME"
 
             cd "$TARGET_DIR"
 
@@ -57,14 +59,19 @@ jobs:
             "$TARGET_DIR/venv/bin/python" manage.py collectstatic --noinput
 
             echo "=== Restart gunicorn ==="
-            pkill -f "gunicorn ntub_usedbooks.wsgi:application --bind 127.0.0.1:$BACKEND_PORT" || true
-
+            OLD_PIDS=$(lsof -ti tcp:${BACKEND_PORT} -sTCP:LISTEN || true)
+            if [ -n "$OLD_PIDS" ]; then
+              echo "Killing old gunicorn listener on port ${BACKEND_PORT}: $OLD_PIDS"
+              kill -TERM $OLD_PIDS || true
+              sleep 2
+            fi
+            
             nohup "$TARGET_DIR/venv/bin/gunicorn" ntub_usedbooks.wsgi:application \
               --bind 127.0.0.1:$BACKEND_PORT \
               --workers 3 \
               > "$TARGET_DIR/backend/gunicorn.log" 2>&1 &
-
-            sleep 3
+            
+            sleep 5
             curl -I "http://127.0.0.1:$BACKEND_PORT"
 
             echo "=== Frontend build ==="
@@ -74,17 +81,37 @@ jobs:
 
             echo "=== Restart Next.js with PM2 ==="
             pm2 delete "$PM2_NAME" || true
-            PORT="$FRONTEND_PORT" pm2 start npm --name "$PM2_NAME" --cwd "$TARGET_DIR/frontend" -- start -- --port "$FRONTEND_PORT"
+
+            pm2 start npm \
+              --name "$PM2_NAME" \
+              --cwd "$TARGET_DIR/frontend" \
+              -- start -- --port "$FRONTEND_PORT"
+
             pm2 save
 
-            sleep 5
-            curl -I "http://127.0.0.1:$FRONTEND_PORT"
+            echo "=== Wait for Next.js (up to 60s) ==="
+            for i in $(seq 1 30); do
+              if curl -fsSI "http://127.0.0.1:$FRONTEND_PORT" >/dev/null 2>&1; then
+                echo "Next.js is up on port $FRONTEND_PORT"
+                break
+              fi
+              if [ "$i" -eq 30 ]; then
+                echo "Next.js failed to listen on port $FRONTEND_PORT after 60s"
+                pm2 describe "$PM2_NAME" || true
+                pm2 logs "$PM2_NAME" --lines 100 --nostream || true
+                exit 1
+              fi
+              echo "Waiting for Next.js... ($i/30)"
+              sleep 2
+            done
 
             echo "=== Reload nginx ==="
             sudo nginx -t
             sudo systemctl reload nginx
 
-            echo "=== Health check ==="
-            curl -I -H "Host: test.ntubook.com" http://127.0.0.1/
+            echo "=== Health checks ==="
+            curl -I http://127.0.0.1
+            curl -I -H "Host: test.ntubook.com" http://127.0.0.1
             curl -I -H "Host: test.ntubook.com" http://127.0.0.1/admin/
+
             echo "=== Deploy finished successfully ==="
