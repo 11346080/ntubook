@@ -16,6 +16,11 @@ class NotificationListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         return Notification.objects.filter(user=self.request.user)
 
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['filtered_notifications'] = self.get_queryset().filter(is_read=False)
+        return ctx
+
 
 # ================= API Views =================
 

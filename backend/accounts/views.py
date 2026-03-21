@@ -1,5 +1,7 @@
-from django.views.generic import TemplateView, FormView
+from django.views.generic import TemplateView, FormView, UpdateView
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LogoutView
+from django.contrib.auth import logout
 from django.shortcuts import redirect
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -50,10 +52,50 @@ class DashboardView(LoginRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['active_tab'] = self.request.GET.get('tab', 'profile')
+
+        user_profile = (
+            UserProfile.objects
+            .select_related('program_type', 'department', 'class_group')
+            .filter(user=self.request.user)
+            .first()
+        )
+
+        ctx['user_profile'] = user_profile
+        ctx['unread_notification_count'] = 0
         return ctx
 
 
-# ================= API Views =================
+# =============================================================================
+# 登出
+# =============================================================================
+def logout_view(request):
+    logout(request)
+    return redirect('/accounts/login/')
+
+
+# =============================================================================
+# 編輯個人資料（分頁 1：Edit Profile）
+# =============================================================================
+class ProfileUpdateView(LoginRequiredMixin, UpdateView):
+    model = UserProfile
+    form_class = UserProfileForm
+    template_name = 'accounts/profile_edit.html'
+    success_url = '/accounts/dashboard/?tab=profile'
+
+    def get_object(self):
+        try:
+            return self.request.user.profile
+        except UserProfile.DoesNotExist:
+            return None
+
+    def get(self, request, *args, **kwargs):
+        obj = self.get_object()
+        if obj is None:
+            return redirect('accounts:first_login')
+        return super().get(request, *args, **kwargs)
+
+
+# ================= API Views ================="
 
 
 @api_view(['GET'])

@@ -6,12 +6,14 @@ from . import admin as ntub_admin
 
 urlpatterns = [
     # ========== Admin ==========
+    path('admin/dashboard/', views.admin_dashboard, name='admin_dashboard'),
     path('admin/', ntub_admin.ntub_admin_site.urls),
     
     # ========== HTML Views (Traditional Routes) ==========
     path('accounts/', include('accounts.urls')),
     path('listings/', include('listings.urls')),
     path('notifications/', include('notifications.urls')),
+    path('requests/', include('purchase_requests.urls')),
     path('', views.home, name='home'),
     
     # ========== API Routes (Centralized under /api/) ==========

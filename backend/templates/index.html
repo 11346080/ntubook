@@ -1,11 +1,136 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>北商傳書 - 二手書交易平台</title>
-</head>
-<body>
-    <h1>歡迎來到北商傳書</h1>
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% block title %}北商傳書 - 二手書交易平台{% endblock %}
+
+{% block extra_css %}
+<style>
+.hero-section {
+    background: linear-gradient(135deg, #0d6efd 0%, #0d6efd99 100%);
+    color: white;
+    padding: 4rem 0;
+    border-radius: 0.75rem;
+    margin-bottom: 2rem;
+}
+.hero-section h1 { font-weight: 700; }
+.hero-section p { font-size: 1.1rem; opacity: 0.9; }
+.book-card {
+    border: 1px solid #e9ecef;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+    background: white;
+}
+.book-card:hover { box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1); }
+.book-card-img {
+    height: 180px;
+    background: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #adb5bd;
+    font-size: 3rem;
+}
+.book-card-body { padding: 1rem; }
+.book-card-title {
+    font-size: 0.95rem;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.book-card-price { color: #0d6efd; font-weight: 700; font-size: 1.1rem; }
+.section-title {
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid #0d6efd;
+    padding-left: 0.75rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="hero-section text-center">
+    <div class="container">
+        <h1 class="mb-3">
+            <i class="fas fa-book-open me-2"></i>歡迎來到北商傳書
+        </h1>
+        <p class="mb-4">北商校內師生專屬的二手教科書媒合平台</p>
+        <div class="d-flex justify-content-center gap-3 flex-wrap">
+            <a href="{% url 'listings:listing_list' %}" class="btn btn-light btn-lg">
+                <i class="fas fa-search me-2"></i>瀏覽書籍
+            </a>
+            <a href="{% url 'listings:listing_create' %}" class="btn btn-outline-light btn-lg">
+                <i class="fas fa-plus me-2"></i>我要賣書
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- 最新上架區塊 -->
+<section class="mb-5">
+    <h2 class="section-title">
+        <i class="fas fa-clock me-2"></i>最新上架
+    </h2>
+    <div class="row g-3">
+        {% if latest_listings %}
+            {% for listing in latest_listings %}
+            <div class="col-md-3 col-sm-6">
+                <div class="book-card">
+                    <div class="book-card-img">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="book-card-body">
+                        <div class="book-card-title" title="{{ listing.book.title }}">
+                            {{ listing.book.title }}
+                        </div>
+                        <div class="text-muted small mb-1">
+                            {{ listing.book.author_display|default:'作者未知' }}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="book-card-price">NT${{ listing.used_price }}</span>
+                            <span class="badge bg-secondary">{{ listing.get_condition_level_display }}</span>
+                        </div>
+                        <a href="{% url 'listings:listing_detail' listing.pk %}" class="stretched-link"></a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            {% for i in "0123"|make_list %}
+            <div class="col-md-3 col-sm-6">
+                <div class="book-card">
+                    <div class="book-card-img">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="book-card-body">
+                        <div class="book-card-title">書籍名稱 placeholder</div>
+                        <div class="text-muted small mb-1">作者 placeholder</div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="book-card-price">NT$---</span>
+                            <span class="badge bg-secondary">良好</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+    <div class="text-end mt-3">
+        <a href="{% url 'listings:listing_list' %}" class="btn btn-outline-primary btn-sm">
+            看更多書籍 <i class="fas fa-arrow-right ms-1"></i>
+        </a>
+    </div>
+</section>
+
+<!-- 熱門書籍區塊 -->
+<section>
+    <h2 class="section-title">
+        <i class="fas fa-fire me-2"></i>熱門書籍
+    </h2>
+    <div class="alert alert-light border">
+        <i class="fas fa-info-circle me-2"></i>
+        熱門書籍模組即將上線，敬請期待。
+    </div>
+</section>
+{% endblock %}

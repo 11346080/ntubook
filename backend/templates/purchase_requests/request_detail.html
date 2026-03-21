@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}預約請求詳情 - 北商傳書{% endblock %}
+
+{% block extra_css %}
+<style>
+.breadcrumb-link {
+    text-decoration: none;
+    color: #0d6efd;
+}
+.breadcrumb-link:hover {
+    text-decoration: underline;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- 麵包屑 -->
+<nav class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'purchases:request_list' %}" class="breadcrumb-link">預約請求</a></li>
+        <li class="breadcrumb-item active">請求詳情</li>
+    </ol>
+</nav>
+
+<div class="row">
+
+    <!-- 左側：書籍和預約信息 -->
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">預約詳情</h5>
+            </div>
+            <div class="card-body">
+                <!-- 書籍信息 -->
+                <div class="mb-4">
+                    <h4>{{ request_obj.listing.book.title }}</h4>
+                    <p class="text-muted mb-0">
+                        作者：{{ request_obj.listing.book.author }}
+                        {% if request_obj.listing.book.publisher %}
+                            | 出版社：{{ request_obj.listing.book.publisher }}
+                        {% endif %}
+                    </p>
+                </div>
+
+                <!-- 價格 -->
+                <div class="mb-4">
+                    <div class="h5">NT${{ request_obj.listing.price }}</div>
+                </div>
+
+                <!-- 狀態 -->
+                <div class="mb-4">
+                    <strong>預約狀態：</strong>
+                    <span class="badge bg-secondary">{{ request_obj.get_status_display }}</span>
+                </div>
+
+                {% if request_obj.seller_message %}
+                    <!-- 賣家回應 -->
+                    <div class="alert alert-info">
+                        <strong>賣家回應：</strong>
+                        <p class="mb-0 mt-2">{{ request_obj.seller_message }}</p>
+                    </div>
+                {% endif %}
+
+                {% if request_obj.buyer_message %}
+                    <!-- 買家留言 -->
+                    <div class="mb-3">
+                        <strong>買家留言：</strong>
+                        <p class="text-muted mb-0">{{ request_obj.buyer_message }}</p>
+                    </div>
+                {% endif %}
+
+                <!-- 時間信息 -->
+                <div class="text-muted small mt-4">
+                    <div>預約時間：{{ request_obj.created_at|date:"Y/m/d H:i" }}</div>
+                    {% if request_obj.updated_at %}
+                        <div>更新時間：{{ request_obj.updated_at|date:"Y/m/d H:i" }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 右側：操作和聯絡人信息 -->
+    <div class="col-md-4">
+        
+        <!-- 聯絡人 -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    {% if is_buyer %}
+                        賣家信息
+                    {% else %}
+                        買家信息
+                    {% endif %}
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <strong>{{ contact_person.profile.display_name|default:contact_person.username }}</strong>
+                    <div class="text-muted small">{{ contact_person.email }}</div>
+                </div>
+                <a href="#" class="btn btn-primary btn-sm w-100">聯繫買家</a>
+            </div>
+        </div>
+
+        <!-- 操作按鈕 -->
+        {% if can_accept %}
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" action="{% url 'purchase_requests:request_accept' request_obj.pk %}" class="d-grid">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success mb-2">接受預約</button>
+                    </form>
+                    <form method="post" action="{% url 'purchase_requests:request_reject' request_obj.pk %}" class="d-grid">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger">拒絕預約</button>
+                    </form>
+                </div>
+            </div>
+        {% elif can_cancel %}
+            <div class="card">
+                <div class="card-body">
+                    <form method="post" action="{% url 'purchase_requests:request_cancel' request_obj.pk %}" class="d-grid">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-secondary">取消預約</button>
+                    </form>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

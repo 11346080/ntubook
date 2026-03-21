@@ -1,0 +1,262 @@
+.filter-section {
+    background-color: #FFFFFF;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1.5rem;
+}
+
+.filter-section h6 {
+    color: var(--primary-color);
+    font-weight: 700;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+    border-bottom: 2px solid var(--accent-color);
+    padding-bottom: 0.5rem;
+}
+
+.filter-group {
+    margin-bottom: 1.5rem;
+}
+
+.filter-group label {
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.filter-group input[type="text"],
+.filter-group input[type="number"],
+.filter-group select {
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+    padding: 0.6rem 0.8rem;
+    font-size: 0.95rem;
+    width: 100%;
+    font-family: 'Noto Sans TC', sans-serif;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+    border-color: var(--accent-color);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(230, 126, 34, 0.1);
+}
+
+.price-range {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.price-range input {
+    flex: 1;
+}
+
+.price-range-separator {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.filter-group .form-check {
+    margin-bottom: 0.75rem;
+}
+
+.form-check-input {
+    border-color: var(--border-light);
+    cursor: pointer;
+}
+
+.form-check-input:checked {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.form-check-label {
+    cursor: pointer;
+    margin-left: 0.5rem;
+    user-select: none;
+}
+
+.btn-filter {
+    width: 100%;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-filter:hover {
+    background-color: var(--accent-color);
+}
+
+.btn-filter-reset {
+    width: 100%;
+    background-color: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    padding: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.btn-filter-reset:hover {
+    background-color: var(--bg-light);
+    border-color: var(--text-secondary);
+}
+
+/* 書籍卡片 */
+.book-card {
+    height: 100%;
+}
+
+.book-card-img-wrapper {
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px 8px 0 0;
+    background-color: var(--bg-light);
+    aspect-ratio: 3 / 4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.book-card-img-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.book-card-badges {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.book-card-condition {
+    display: inline-block;
+}
+
+.book-card-status {
+    display: inline-block;
+}
+
+.book-card-body {
+    padding: 1.25rem;
+}
+
+.book-author {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.book-department {
+    display: inline-block;
+    background-color: var(--bg-light);
+    color: var(--primary-color);
+    font-size: 0.8rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 12px;
+    margin-bottom: 0.75rem;
+}
+
+.book-price {
+    color: var(--accent-color);
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.book-seller {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+}
+
+.book-card-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.book-card-actions .btn {
+    flex: 1;
+    font-size: 0.9rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 6px;
+}
+
+/* 篩選結果頭部 */
+.listings-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.listings-title h2 {
+    color: var(--primary-color);
+    font-weight: 700;
+}
+
+.listings-sort {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.listings-sort select {
+    border-radius: 6px;
+    border: 1px solid var(--border-light);
+    padding: 0.6rem 0.8rem;
+    background-color: white;
+    cursor: pointer;
+    font-family: 'Noto Sans TC', sans-serif;
+}
+
+.listings-sort select:focus {
+    border-color: var(--accent-color);
+    outline: none;
+}
+
+/* 無結果提示 */
+.no-results {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-secondary);
+}
+
+.no-results i {
+    font-size: 3rem;
+    color: var(--border-light);
+    margin-bottom: 1rem;
+}
+
+/* 響應式 */
+@media (max-width: 768px) {
+    .listings-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .filter-section {
+        margin-bottom: 2rem;
+    }
+
+    .book-card-img-wrapper {
+        aspect-ratio: 3 / 4;
+    }
+}
