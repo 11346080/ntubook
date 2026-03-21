@@ -60,13 +60,18 @@ jobs:
             "$TARGET_DIR/venv/bin/python" manage.py collectstatic --noinput
 
             echo "=== Restart gunicorn ==="
-            pkill -f "gunicorn ntub_usedbooks.wsgi:application" || true
-
+            OLD_PIDS=$(lsof -ti tcp:${BACKEND_PORT} -sTCP:LISTEN || true)
+            if [ -n "$OLD_PIDS" ]; then
+              echo "Killing old gunicorn listener on port ${BACKEND_PORT}: $OLD_PIDS"
+              kill -TERM $OLD_PIDS || true
+              sleep 2
+            fi
+            
             nohup "$TARGET_DIR/venv/bin/gunicorn" ntub_usedbooks.wsgi:application \
               --bind 127.0.0.1:$BACKEND_PORT \
               --workers 3 \
               > "$TARGET_DIR/backend/gunicorn.log" 2>&1 &
-
+            
             sleep 5
             curl -I "http://127.0.0.1:$BACKEND_PORT"
 
