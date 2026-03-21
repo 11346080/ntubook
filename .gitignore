@@ -5,16 +5,34 @@ __pycache__/
 *.mo
 *.pot
 
+# --- Node.js / Next.js (新增) ---
+node_modules/
+.next/
+out/
+build/
+dist/
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
 # --- 虛擬環境 ---
 venv/
 .venv/
 env/
 
-# --- 本機資料庫 ---
+# --- 本機資料庫與靜態資源 ---
 db.sqlite3
+backend/db.sqlite3     
+static/                
+media/                 
 
 # --- 機密資訊與憑證 ---
 .env
+.env.local             
+.env.development.local
+.env.test.local
+.env.production.local
 *.pem
 ca.pem
 
@@ -22,3 +40,4 @@ ca.pem
 .vscode/
 .idea/
 .DS_Store
+Thumbs.db
