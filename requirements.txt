@@ -9,3 +9,6 @@ django-cors-headers>=4.3.0
 
 # Authentication & OAuth (From earlier)
 django-allauth>=0.57.0
+
+PyJWT
+cryptography
