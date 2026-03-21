@@ -13,22 +13,30 @@ export default function Navbar({ initialAuth, unreadNotifications = 0 }: NavbarP
   const [isAuthenticated, setIsAuthenticated] = useState(initialAuth);
   const pathname = usePathname();
 
-  // 定義選單項目，方便管理
+  // 修正點：點擊連結後手動關閉手機版選單
+  const handleLinkClick = () => {
+    const navContent = document.getElementById('navContent');
+    if (navContent?.classList.contains('show')) {
+      // 移除 Bootstrap 的 show 類別來關閉選單
+      navContent.classList.remove('show');
+    }
+  };
+
   const navLinks = [
-    { name: '我要賣書', href: '/sell', icon: 'fa-plus-circle' },
-    { name: '會員中心', href: '/member', icon: 'fa-user-circle' },
+    { name: '我要賣書', href: '/listings', icon: 'fa-plus-circle' },
+    { name: '會員中心', href: '/dashboard', icon: 'fa-user-circle' },
   ];
 
   return (
     <nav className="navbar navbar-expand-lg navbar-light bg-white border-bottom fixed-top py-2 shadow-sm">
       <div className="container">
         {/* Logo */}
-        <Link className="navbar-brand d-flex align-items-center fw-bold text-primary" href="/">
+        <Link className="navbar-brand d-flex align-items-center fw-bold text-primary" href="/" onClick={handleLinkClick}>
           <i className="fas fa-book-open me-2"></i>
           北商傳書
         </Link>
 
-        {/* 漢堡選單 (手機版) */}
+        {/* 漢堡選單按鈕 */}
         <button 
           className="navbar-toggler border-0" 
           type="button" 
@@ -39,7 +47,7 @@ export default function Navbar({ initialAuth, unreadNotifications = 0 }: NavbarP
         </button>
 
         <div className="collapse navbar-collapse" id="navContent">
-          {/* 中間搜尋框 - 提高響應式體驗 */}
+          {/* 中間搜尋框 */}
           <form className="mx-auto my-3 my-lg-0 d-flex w-100" style={{ maxWidth: '500px' }}>
             <div className="input-group">
               <input
@@ -61,6 +69,7 @@ export default function Navbar({ initialAuth, unreadNotifications = 0 }: NavbarP
                 <Link 
                   className={`nav-link fw-medium px-3 ${pathname === link.href ? 'text-primary' : 'text-dark'}`} 
                   href={link.href}
+                  onClick={handleLinkClick} // 確保點擊後收合選單
                 >
                   <i className={`fas ${link.icon} me-1`}></i> {link.name}
                 </Link>
@@ -69,7 +78,7 @@ export default function Navbar({ initialAuth, unreadNotifications = 0 }: NavbarP
             
             {/* 通知中心 */}
             <li className="nav-item px-2 position-relative d-none d-lg-block">
-              <Link href="/notifications" className="text-dark">
+              <Link href="/notifications" className="text-dark" onClick={handleLinkClick}>
                 <i className="fas fa-bell fs-5 cursor-pointer"></i>
                 {unreadNotifications > 0 && (
                   <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger border border-light">
@@ -83,13 +92,20 @@ export default function Navbar({ initialAuth, unreadNotifications = 0 }: NavbarP
             <li className="nav-item ms-lg-3">
               {isAuthenticated ? (
                 <button 
-                  onClick={() => setIsAuthenticated(false)}
+                  onClick={() => {
+                    setIsAuthenticated(false);
+                    handleLinkClick();
+                  }}
                   className="btn btn-outline-danger btn-sm rounded-pill px-4 shadow-sm"
                 >
                   登出
                 </button>
               ) : (
-                <Link href="/login" className="btn btn-primary btn-sm rounded-pill px-4 shadow-sm text-white">
+                <Link 
+                  href="/login" 
+                  className="btn btn-primary btn-sm rounded-pill px-4 shadow-sm text-white"
+                  onClick={handleLinkClick}
+                >
                   登入
                 </Link>
               )}
