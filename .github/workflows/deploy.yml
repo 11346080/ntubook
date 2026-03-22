@@ -33,7 +33,6 @@ jobs:
             PM2_NAME="ntubook-next"
             LOG_DIR="$TARGET_DIR/deploy-logs"
 
-            mkdir -p "$LOG_DIR"
             export NEXT_TELEMETRY_DISABLED=1
             export npm_config_cache="$TARGET_DIR/.npm-cache"
 
@@ -52,6 +51,7 @@ jobs:
             git fetch origin dev
             git reset --hard origin/dev
             git clean -fd
+            mkdir -p "$LOG_DIR"
 
             NEW_COMMIT="$(git rev-parse HEAD)"
             echo "PREV_COMMIT=${PREV_COMMIT:-<none>}"
@@ -69,7 +69,7 @@ jobs:
             FRONTEND_CHANGED=false
             FRONTEND_DEPS_CHANGED=false
 
-            if echo "$CHANGED_FILES" | grep -E '^(frontend/|\.github/workflows/deploy\.yml$)' >/dev/null 2>&1; then
+            if echo "$CHANGED_FILES" | grep -E '^frontend/' >/dev/null 2>&1; then
               FRONTEND_CHANGED=true
             fi
 
