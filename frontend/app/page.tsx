@@ -157,6 +157,27 @@ interface Listing {
 }
 
 function LatestListingCard({ listing }: { listing: Listing }) {
+  // Build proper image URL - handle relative paths from backend
+  let imageUrl: string | null = null;
+
+  // Priority 1: Primary image from API (with URL construction)
+  if (listing.primary_image?.file_path) {
+    const filePath = listing.primary_image.file_path;
+    // Check if it's already a full URL
+    if (filePath.startsWith('http')) {
+      imageUrl = filePath;
+    } else {
+      // Build URL from relative path
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+      const backendUrl = API_BASE_URL.replace('/api', '');
+      imageUrl = `${backendUrl}/media/${filePath}`;
+    }
+  }
+  // Priority 2: Book cover image
+  else if (listing.cover_image_url) {
+    imageUrl = listing.cover_image_url;
+  }
+
   return (
     <Link href={`/listings/${listing.id}`} style={{ textDecoration: 'none' }}>
       <div
@@ -195,9 +216,9 @@ function LatestListingCard({ listing }: { listing: Listing }) {
             position: 'relative',
           }}
         >
-          {listing.cover_image_url ? (
+          {imageUrl ? (
             <img
-              src={listing.cover_image_url}
+              src={imageUrl}
               alt={listing.book_title}
               style={{
                 width: '100%',
@@ -209,20 +230,22 @@ function LatestListingCard({ listing }: { listing: Listing }) {
               }}
             />
           ) : null}
-          <div
-            style={{
-              position: 'absolute',
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '48px',
-              color: 'var(--color-muted)',
-            }}
-          >
-            <i className="fas fa-book"></i>
-          </div>
+          {!imageUrl && (
+            <div
+              style={{
+                position: 'absolute',
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '48px',
+                color: 'var(--color-muted)',
+              }}
+            >
+              <i className="fas fa-book"></i>
+            </div>
+          )}
         </div>
 
         {/* 卡片內容 */}
@@ -373,7 +396,7 @@ function RecommendedListingsSection() {
           推薦書籍
         </h2>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: '16px' }}>
-          編輯精選，值得一讀的好書
+          跟你修同一門課的人都在用 - 傳承書單
         </p>
       </div>
 

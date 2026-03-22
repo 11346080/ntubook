@@ -1,12 +1,30 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface HeroSectionProps {
   isAuthenticated?: boolean;
 }
 
 export default function HeroSection({ isAuthenticated = false }: HeroSectionProps) {
+  const [keyword, setKeyword] = useState('');
+  const router = useRouter();
+
+  const handleSearchSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (keyword.trim()) {
+      router.push(`/listings?keyword=${encodeURIComponent(keyword.trim())}`);
+    }
+  };
+
+  const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && keyword.trim()) {
+      router.push(`/listings?keyword=${encodeURIComponent(keyword.trim())}`);
+    }
+  };
+
   return (
     <div
       style={{
@@ -37,6 +55,75 @@ export default function HeroSection({ isAuthenticated = false }: HeroSectionProp
         >
           北商校內師生專屬的二手教科書媒合平台
         </p>
+
+        {/* 搜尋框 - 東方美學設計 */}
+        <form
+          onSubmit={handleSearchSubmit}
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            marginBottom: '2rem',
+            maxWidth: '600px',
+            margin: '0 auto 2rem auto',
+          }}
+        >
+          <input
+            type="text"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onKeyPress={handleSearchKeyPress}
+            placeholder="搜尋書名、作者、ISBN..."
+            style={{
+              flex: 1,
+              padding: '0.75rem 1rem',
+              border: 'none',
+              borderBottom: '2px solid rgba(255, 255, 255, 0.5)',
+              backgroundColor: 'transparent',
+              color: 'white',
+              fontSize: '1rem',
+              outline: 'none',
+              transition: 'border-color 0.3s ease',
+              minWidth: '200px',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderBottomColor = '#9b2335';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderBottomColor = 'rgba(255, 255, 255, 0.5)';
+            }}
+          />
+          <button
+            type="submit"
+            style={{
+              padding: '0.75rem 1.5rem',
+              backgroundColor: '#9b2335',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.25rem',
+              fontWeight: 500,
+              fontSize: '1rem',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = '#7a1a2b';
+              e.currentTarget.style.transform = 'scale(1.05)';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = '#9b2335';
+              e.currentTarget.style.transform = 'scale(1)';
+            }}
+          >
+            <i className="fas fa-search"></i>搜尋
+          </button>
+        </form>
+
+        {/* 快速操作按鈕區 */}
         <div
           style={{
             display: 'flex',
@@ -70,7 +157,7 @@ export default function HeroSection({ isAuthenticated = false }: HeroSectionProp
               target.style.backgroundColor = 'white';
             }}
           >
-            <i className="fas fa-search"></i>瀏覽書籍
+            <i className="fas fa-list"></i>瀏覽書籍
           </Link>
           <Link
             href="/accounts/login"
@@ -102,6 +189,12 @@ export default function HeroSection({ isAuthenticated = false }: HeroSectionProp
           </Link>
         </div>
       </div>
+
+      <style>{`
+        input::placeholder {
+          color: rgba(255, 255, 255, 0.7);
+        }
+      `}</style>
     </div>
   );
 }

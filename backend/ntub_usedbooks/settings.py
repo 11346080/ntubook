@@ -201,6 +201,13 @@ EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@ntub.edu.tw')
 
+# ========== Media Files Configuration ==========
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
+# Default storage for uploaded files
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
 # Allauth Social Account Settings
 SOCIALACCOUNT_ADAPTER = 'accounts.adapter.StudentInfoSocialAccountAdapter'
 SOCIALACCOUNT_QUERY_EMAIL = True
