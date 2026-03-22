@@ -330,9 +330,8 @@ function RecommendedListingsSection() {
     const fetchRecommendedListings = async () => {
       try {
         setLoading(true);
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         // 可改用推薦排序 API，如果後端有的話；否則用最新 API 取前 8 本
-        const response = await fetch(`${apiUrl}/api/listings/latest/`);
+        const response = await fetch(`http://localhost:8000/api/listings/latest/`);
         if (!response.ok) {
           throw new Error(`Failed to fetch: ${response.statusText}`);
         }
@@ -416,7 +415,8 @@ function LatestListingsSection() {
     const fetchLatestListings = async () => {
       try {
         setLoading(true);
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        // const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const apiUrl = 'http://localhost:8000';
         const response = await fetch(`${apiUrl}/api/listings/latest/`);
         if (!response.ok) {
           throw new Error(`Failed to fetch: ${response.statusText}`);

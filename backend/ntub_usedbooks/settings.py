@@ -206,6 +206,16 @@ SOCIALACCOUNT_ADAPTER = 'accounts.adapter.StudentInfoSocialAccountAdapter'
 SOCIALACCOUNT_QUERY_EMAIL = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
+# JWT app_token settings
+# DJANGO_JWT_SECRET: shared secret between Django and Next.js (kept internal)
+# JWT_EXPIRES_SECONDS: default 30 days (2592000s)
+DJANGO_JWT_SECRET = env('DJANGO_JWT_SECRET', default='')
+JWT_EXPIRES_SECONDS = env.int('JWT_EXPIRES_SECONDS', default=2592000)
+# BOOTSTRAP_TOKEN_EXPIRES_SECONDS: short-lived token for bootstrap endpoint only
+BOOTSTRAP_TOKEN_EXPIRES_SECONDS = 300  # 5 minutes
+# DJANGO_BOOTSTRAP_SECRET: secret for Next.js → Django bootstrap handshake
+DJANGO_BOOTSTRAP_SECRET = env('DJANGO_BOOTSTRAP_SECRET', default='')
+
 # Google OAuth Provider Configuration
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
