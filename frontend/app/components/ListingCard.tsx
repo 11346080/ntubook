@@ -35,12 +35,30 @@ interface ListingCardItem {
 }
 
 export default function ListingCard({ listing }: { listing: ListingCardItem }) {
-  // 解析封面图片URL
-  const coverImage = 
-    listing.cover_image || 
-    listing.primary_image?.file_path || 
-    listing.book.cover_image_url ||
-    null;
+  // Build proper image URL - handle relative paths from backend
+  let coverImage: string | null = null;
+
+  // Priority 1: Direct cover_image
+  if (listing.cover_image) {
+    coverImage = listing.cover_image;
+  }
+  // Priority 2: Primary image from listings API
+  else if (listing.primary_image?.file_path) {
+    const filePath = listing.primary_image.file_path;
+    // Check if it's already a full URL
+    if (filePath.startsWith('http')) {
+      coverImage = filePath;
+    } else {
+      // Build URL from relative path
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+      const backendUrl = API_BASE_URL.replace('/api', '');
+      coverImage = `${backendUrl}/media/${filePath}`;
+    }
+  }
+  // Priority 3: Book cover image
+  else if (listing.book.cover_image_url) {
+    coverImage = listing.book.cover_image_url;
+  }
 
   // 作者信息
   const author = listing.book.author_display || listing.book.author || '作者未知';
@@ -111,7 +129,7 @@ export default function ListingCard({ listing }: { listing: ListingCardItem }) {
             />
           ) : (
             <div style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}></div>
+              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📖</div>
               <div style={{ fontSize: '0.75rem', color: '#9b2335' }}>北商傳書</div>
             </div>
           )}

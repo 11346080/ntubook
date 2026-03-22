@@ -349,6 +349,41 @@ export default function Navbar({ initialAuth = false, unreadNotifications = 0 }:
                 </li>
               ))}
             </ul>
+
+            {/* Auth Section in Mobile Menu */}
+            <div className={styles.mobileAuthSection}>
+              {isAuthenticated ? (
+                <button
+                  onClick={() => {
+                    setIsAuthenticated(false);
+                    closeMenu();
+                  }}
+                  className={styles.mobileLogoutBtn}
+                >
+                  <span className={styles.mobileAuthIcon}>👥</span>
+                  登出
+                </button>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    onClick={closeMenu}
+                    className={styles.mobileLoginBtn}
+                  >
+                    <span className={styles.mobileAuthIcon}>🔐</span>
+                    登入
+                  </Link>
+                  <Link
+                    href="/register"
+                    onClick={closeMenu}
+                    className={styles.mobileRegisterBtn}
+                  >
+                    <span className={styles.mobileAuthIcon}>✍️</span>
+                    註冊
+                  </Link>
+                </>
+              )}
+            </div>
           </nav>
         </div>
 
