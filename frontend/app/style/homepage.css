@@ -181,6 +181,53 @@ main.flex-shrink-0 > .container { padding: 0 !important; max-width: 100% !import
 
 .browse-link:hover { color: var(--ink); border-color: rgba(30,20,10,0.5); }
 
+/* ===== 書籍網格數量限制 (RWD) ===== */
+/* 推薦書籍與最新上架 - Desktop 最多 8 本，Mobile 最多 4 本 */
+@media (min-width: 992px) {
+  .recommended-listings-grid > :nth-child(n+9),
+  .latest-listings-grid > :nth-child(n+9) {
+    display: none;
+  }
+}
+
+@media (max-width: 991px) {
+  .recommended-listings-grid > :nth-child(n+5),
+  .latest-listings-grid > :nth-child(n+5) {
+    display: none;
+  }
+}
+
+/* ===== 新瀏覽所有按鈕樣式 ===== */
+.browse-all-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--seal-red);
+  color: var(--paper);
+  border: 1.5px solid var(--seal-red);
+  border-radius: 2px;
+  font-family: 'Noto Serif TC', serif;
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  padding: 11px 28px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.25s ease;
+  font-weight: 600;
+}
+
+.browse-all-btn:hover {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+  box-shadow: 0 4px 12px rgba(30, 20, 10, 0.25);
+  transform: translateY(-2px);
+}
+
+.browse-all-btn:active {
+  transform: translateY(0);
+}
+
 .ink-divider {
   width: 60px;
   height: 1px;

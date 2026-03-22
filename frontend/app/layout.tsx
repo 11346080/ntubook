@@ -7,6 +7,9 @@ import Script from "next/script";
 export const metadata: Metadata = {
   title: "北商傳書 | NTUB 二手書平台",
   description: "國立台北商業大學二手書交易平台 - 快速找書，輕鬆上架",
+  icons: {
+    icon: "/vercel.svg",
+  },
 };
 
 export default function RootLayout({

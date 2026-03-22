@@ -321,6 +321,92 @@ function getConditionLabel(level: string): string {
 }
 
 // ── 最新上架區塊 ──────────────────────────────────────────────────
+function RecommendedListingsSection() {
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchRecommendedListings = async () => {
+      try {
+        setLoading(true);
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        // 可改用推薦排序 API，如果後端有的話；否則用最新 API 取前 8 本
+        const response = await fetch(`${apiUrl}/api/listings/latest/`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch: ${response.statusText}`);
+        }
+        const data = await response.json();
+        setListings(Array.isArray(data.data) ? data.data : data.data?.results || []);
+        setError(null);
+      } catch (err) {
+        console.error('Error fetching recommended listings:', err);
+        setError('無法載入推薦書籍');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRecommendedListings();
+  }, []);
+
+  if (error) {
+    return (
+      <section style={{ padding: '4rem 0', textAlign: 'center' }}>
+        <p style={{ color: 'var(--color-muted)' }}>{error}</p>
+      </section>
+    );
+  }
+
+  return (
+    <section style={{ padding: '4rem 0' }}>
+      {/* 標題 */}
+      <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+        <h2
+          style={{
+            fontFamily: "'Noto Serif TC', serif",
+            fontSize: '32px',
+            fontWeight: '700',
+            color: 'var(--color-text-primary)',
+            marginBottom: '0.5rem',
+          }}
+        >
+          推薦書籍
+        </h2>
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: '16px' }}>
+          編輯精選，值得一讀的好書
+        </p>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '2rem' }}>
+          <div className="spinner-border" style={{ color: 'var(--color-seal)' }} role="status">
+            <span className="visually-hidden">載入中...</span>
+          </div>
+        </div>
+      ) : listings.length > 0 ? (
+        <>
+          {/* 書籍網格 - 使用 CSS 限制數量 */}
+          <div
+            className="recommended-listings-grid"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+              gap: '1.5rem',
+              marginBottom: '2rem',
+            }}
+          >
+            {listings.map((listing) => (
+              <LatestListingCard key={listing.id} listing={listing} />
+            ))}
+          </div>
+        </>
+      ) : null}
+    </section>
+  );
+}
+
+// ── 最新上架區塊 ──────────────────────────────────────────────────
 function LatestListingsSection() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -385,8 +471,9 @@ function LatestListingsSection() {
         </div>
       ) : listings.length > 0 ? (
         <>
-          {/* 書籍網格 */}
+          {/* 書籍網格 - 使用 CSS 限制數量 */}
           <div
+            className="latest-listings-grid"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
@@ -402,27 +489,11 @@ function LatestListingsSection() {
           {/* 查看全部按鈕 */}
           <div style={{ textAlign: 'center' }}>
             <Link
-              href="/listings"
-              style={{
-                display: 'inline-block',
-                padding: '0.75rem 2rem',
-                backgroundColor: 'var(--color-cta)',
-                color: 'white',
-                textDecoration: 'none',
-                borderRadius: 'var(--border-radius)',
-                fontWeight: '600',
-                transition: 'all var(--transition-duration) ease',
-              }}
-              onMouseEnter={(e) => {
-                (e.target as HTMLElement).style.backgroundColor = '#0b5ed7';
-                (e.target as HTMLElement).style.transform = 'translateY(-2px)';
-              }}
-              onMouseLeave={(e) => {
-                (e.target as HTMLElement).style.backgroundColor = 'var(--color-cta)';
-                (e.target as HTMLElement).style.transform = 'translateY(0)';
-              }}
+              href="/listings?ordering=-created_at"
+              className="browse-all-btn"
             >
-              瀏覽全部書籍 →
+              <span>瀏覽全部書籍</span>
+              <i className="fas fa-arrow-right"></i>
             </Link>
           </div>
         </>
@@ -625,9 +696,40 @@ export default function HomePage() {
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', flexWrap: 'wrap' }}>
             <a href="/listings" className="post-btn">瀏覽所有書籍</a>
+            <Link
+              href="/listings/create"
+              className="post-btn"
+              style={{
+                background: 'var(--seal-red)',
+                color: 'var(--paper)',
+                border: 'none',
+                transition: 'all 0.25s ease',
+              }}
+              onMouseEnter={(e) => {
+                (e.target as HTMLElement).style.background = 'var(--ink)';
+                (e.target as HTMLElement).style.transform = 'translateY(-2px)';
+                (e.target as HTMLElement).style.boxShadow = '0 4px 12px rgba(30, 20, 10, 0.25)';
+              }}
+              onMouseLeave={(e) => {
+                (e.target as HTMLElement).style.background = 'var(--seal-red)';
+                (e.target as HTMLElement).style.transform = 'translateY(0)';
+                (e.target as HTMLElement).style.boxShadow = 'none';
+              }}
+            >
+              刊登書籍
+            </Link>
           </div>
         </div>
       </div>
+
+      {/* 最新上架區塊 */}
+      {showContent && (
+        <section style={{ backgroundColor: 'var(--color-bg-primary)', padding: '0' }}>
+          <div className="container-lg">
+            <RecommendedListingsSection />
+          </div>
+        </section>
+      )}
 
       {/* 最新上架區塊 */}
       {showContent && (
