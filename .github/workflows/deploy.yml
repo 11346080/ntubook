@@ -38,6 +38,10 @@ jobs:
             git fetch origin dev
             git reset --hard origin/dev
             git clean -fd
+            echo "=== Frontend env setup ==="
+            cat > "$TARGET_DIR/frontend/.env.production.local" <<'EOF'
+            NEXT_PUBLIC_API_URL=https://test.ntubook.com
+            EOF
 
             echo "=== Backend env check ==="
             if [ ! -f "$TARGET_DIR/backend/.env" ]; then
