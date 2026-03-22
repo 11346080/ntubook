@@ -328,7 +328,6 @@ export default function Navbar({ unreadNotifications = 0 }: NavbarProps) {
 
         {/* Nav content */}
         <div className={styles.menuInner}>
-          <div className={styles.overlayRule}></div>
           <nav>
             <ul className={styles.navList}>
               {navLinks.map((link, idx) => (
@@ -359,7 +358,6 @@ export default function Navbar({ unreadNotifications = 0 }: NavbarProps) {
                   }}
                   className={styles.mobileLogoutBtn}
                 >
-                  <span className={styles.mobileAuthIcon}>👥</span>
                   登出
                 </button>
               ) : (
@@ -369,7 +367,6 @@ export default function Navbar({ unreadNotifications = 0 }: NavbarProps) {
                     onClick={closeMenu}
                     className={styles.mobileLoginBtn}
                   >
-                    <span className={styles.mobileAuthIcon}>🔐</span>
                     登入
                   </Link>
                   <Link
@@ -377,7 +374,6 @@ export default function Navbar({ unreadNotifications = 0 }: NavbarProps) {
                     onClick={closeMenu}
                     className={styles.mobileRegisterBtn}
                   >
-                    <span className={styles.mobileAuthIcon}>✍️</span>
                     註冊
                   </Link>
                 </>
@@ -386,12 +382,12 @@ export default function Navbar({ unreadNotifications = 0 }: NavbarProps) {
           </nav>
         </div>
 
-        {/* Footer */}
+        {/* Footer
         <div className={styles.overlayFooter}>
-          <span className={styles.overlayQuote}>「書中自有千鍾粟，書中自有黃金屋。」</span>
+          <span className={styles.overlayQuote}></span>
           <div className={styles.overlayLineDeco}></div>
-          <span className={styles.overlayQuote}>© 北商傳書</span>
-        </div>
+          <span className={styles.overlayQuote}></span>
+        </div> */}
       </div>
     </>
   );
