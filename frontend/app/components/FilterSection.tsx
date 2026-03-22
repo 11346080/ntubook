@@ -8,9 +8,13 @@ interface FilterSectionProps {
 
 export default function FilterSection({ children }: FilterSectionProps) {
   return (
-    <div className="filter-section">
-      <h6><i className="fas fa-filter"></i> 篩選條件</h6>
+    <aside
+      style={{
+        position: 'sticky',
+        top: '2rem',
+      }}
+    >
       {children}
-    </div>
+    </aside>
   );
 }

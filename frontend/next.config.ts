@@ -1,17 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  async rewrites() {
-    return {
-      beforeFiles: [
-        {
-          source: '/api/:path*',
-          destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/:path*`,
-        },
-      ],
-    };
-  },
-  /* config options here */
+  /* Note: Removed rewrites() due to infinite redirect issues in dev mode.
+     Use NEXT_PUBLIC_API_URL environment variable directly in frontend code instead. */
 };
 
 export default nextConfig;

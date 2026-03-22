@@ -330,9 +330,8 @@ function RecommendedListingsSection() {
     const fetchRecommendedListings = async () => {
       try {
         setLoading(true);
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        // 可改用推薦排序 API，如果後端有的話；否則用最新 API 取前 8 本
-        const response = await fetch(`${apiUrl}/api/listings/latest/`);
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const response = await fetch(`${API_BASE_URL}/listings/latest/`);
         if (!response.ok) {
           throw new Error(`Failed to fetch: ${response.statusText}`);
         }
@@ -374,7 +373,7 @@ function RecommendedListingsSection() {
           推薦書籍
         </h2>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: '16px' }}>
-          編輯精選，值得一讀的好書
+          跟你修同一門課的人都在用 - 傳承書單
         </p>
       </div>
 
@@ -416,8 +415,8 @@ function LatestListingsSection() {
     const fetchLatestListings = async () => {
       try {
         setLoading(true);
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        const response = await fetch(`${apiUrl}/api/listings/latest/`);
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const response = await fetch(`${API_BASE_URL}/listings/latest/`);
         if (!response.ok) {
           throw new Error(`Failed to fetch: ${response.statusText}`);
         }

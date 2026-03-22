@@ -2,122 +2,210 @@
 
 import Link from 'next/link';
 
-interface Listing {
+interface Book {
+  id?: number;
+  title: string;
+  author_display?: string;
+  author?: string;
+  isbn13?: string;
+  cover_image_url?: string;
+}
+
+interface Seller {
+  id?: number;
+  display_name?: string;
+  department?: {
+    id?: number;
+    name_zh?: string;
+  } | null;
+}
+
+interface ListingCardItem {
   id: number;
-  book: {
-    title: string;
-    author: string;
-  };
+  book: Book;
+  seller?: Seller;
   used_price: number;
   condition_level?: string;
   condition_level_display?: string;
   cover_image?: string;
+  primary_image?: {
+    file_path?: string;
+    is_primary?: boolean;
+  } | null;
 }
 
-export default function ListingCard({ listing }: { listing: Listing }) {
+export default function ListingCard({ listing }: { listing: ListingCardItem }) {
+  // 解析封面图片URL
+  const coverImage = 
+    listing.cover_image || 
+    listing.primary_image?.file_path || 
+    listing.book.cover_image_url ||
+    null;
+
+  // 作者信息
+  const author = listing.book.author_display || listing.book.author || '作者未知';
+  
+  // 卖家系所显示
+  const departmentDisplay = listing.seller?.department?.name_zh || '';
+
   return (
-    <Link href="/listings" style={{ textDecoration: 'none', color: 'inherit' }}>
+    <Link 
+      href={`/listings/${listing.id}`} 
+      style={{ textDecoration: 'none', color: 'inherit' }}
+    >
       <div
         style={{
-          border: '1px solid #e9ecef',
+          backgroundColor: 'white',
           borderRadius: '0.5rem',
           overflow: 'hidden',
-          transition: 'box-shadow 0.2s',
-          backgroundColor: 'white',
-          cursor: 'pointer',
-          display: 'block',
-          textDecoration: 'none',
+          border: '1px solid #e9ecef',
           height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          cursor: 'pointer',
+          transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
         }}
         onMouseEnter={(e) => {
           const el = e.currentTarget as HTMLElement;
-          el.style.boxShadow = '0 0.5rem 1rem rgba(0,0,0,0.1)';
+          el.style.transform = 'translateY(-8px)';
+          el.style.boxShadow = '0 12px 24px rgba(30, 20, 10, 0.15)';
         }}
         onMouseLeave={(e) => {
           const el = e.currentTarget as HTMLElement;
-          el.style.boxShadow = '0 0 0 transparent';
+          el.style.transform = 'translateY(0)';
+          el.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
         }}
       >
-        {/* Book Image */}
+        {/* 封面圖像區 / Book Cover */}
         <div
           style={{
-            height: '180px',
-            backgroundColor: '#f8f9fa',
+            height: '200px',
+            backgroundColor: '#f9f7f2', // 浅灰色背景
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#adb5bd',
+            color: '#9b2335', // 印章紅
             fontSize: '3rem',
+            overflow: 'hidden',
+            position: 'relative',
           }}
         >
-          {listing.cover_image ? (
+          {coverImage ? (
             <img
-              src={listing.cover_image}
+              src={coverImage}
               alt={listing.book.title}
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+              onMouseEnter={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                img.style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                img.style.transform = 'scale(1)';
+              }}
             />
           ) : (
-            <i className="fas fa-book"></i>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}></div>
+              <div style={{ fontSize: '0.75rem', color: '#9b2335' }}>北商傳書</div>
+            </div>
           )}
         </div>
 
-        {/* Card Body */}
-        <div style={{ padding: '1rem' }}>
-          {/* Title */}
+        {/* 卡片主體 / Card Body */}
+        <div style={{ padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {/* 書名 / Title */}
           <div
             style={{
               fontSize: '0.95rem',
-              fontWeight: 500,
+              fontWeight: 600,
+              color: '#1e140a', // 墨黑
+              marginBottom: '0.25rem',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              color: '#1a1a1a',
-              marginBottom: '0.25rem',
+              maxWidth: '100%',
             }}
             title={listing.book.title}
           >
             {listing.book.title}
           </div>
 
-          {/* Author */}
+          {/* 作者 / Author */}
           <div
             style={{
-              color: '#6c757d',
-              fontSize: '0.875rem',
+              fontSize: '0.85rem',
+              color: '#6c757d', // 淡墨色
               marginBottom: '0.5rem',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
+            title={author}
           >
-            {listing.book.author || '作者未知'}
+            {author}
           </div>
 
-          {/* Price and Condition */}
+          {/* 系所標籤 / Department Badge (if available) */}
+          {departmentDisplay && (
+            <div
+              style={{
+                fontSize: '0.75rem',
+                backgroundColor: '#f9f7f2', // 浅灰色
+                color: '#9b2335', // 印章紅
+                padding: '0.25rem 0.5rem',
+                borderRadius: '0.25rem',
+                marginBottom: '0.75rem',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+              title={departmentDisplay}
+            >
+              {departmentDisplay}
+            </div>
+          )}
+
+          {/* 價格與書況 / Price and Condition */}
           <div
             style={{
+              marginTop: 'auto',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
+              paddingTop: '0.5rem',
+              borderTop: '1px solid #e9ecef',
             }}
           >
+            {/* 價格 / Price */}
             <span
               style={{
-                color: '#0d6efd',
+                color: '#9b2335', // 印章紅
                 fontWeight: 700,
                 fontSize: '1.1rem',
               }}
             >
-              NT${listing.used_price}
+              NT${Math.ceil(parseFloat(String(listing.used_price)))}
             </span>
+
+            {/* 書況 / Condition */}
             <span
               style={{
-                backgroundColor: '#6c757d',
-                color: 'white',
-                padding: '0.25rem 0.5rem',
+                backgroundColor: '#9b2335', // 印章紅
+                color: '#ffffff', // 白色文字
+                padding: '0.25rem 0.6rem',
                 borderRadius: '0.25rem',
                 fontSize: '0.75rem',
                 fontWeight: 500,
+                whiteSpace: 'nowrap',
               }}
             >
-              {listing.condition_level_display || listing.condition_level || '未知'}
+              {listing.condition_level_display || listing.condition_level || '普通'}
             </span>
           </div>
         </div>
