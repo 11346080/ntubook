@@ -60,7 +60,7 @@ export default function Footer() {
                 {/* Logo 圖片 - 支援文字回退 */}
                 {!logoError ? (
                   <Image
-                  src="/images/Logo.jpg"
+                  src="/images/Logo.png"
                   alt="NTUB 二手書平台 Logo"
                   width={100}         
                   height={65}         
