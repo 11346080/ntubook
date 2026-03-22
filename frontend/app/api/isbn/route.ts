@@ -8,7 +8,7 @@ interface CavesBookResponse {
     author?: string;
     publisher?: string;
     isbn?: string;
-    [key: string]: any;
+    [key: string]: unknown;
   }[];
 }
 

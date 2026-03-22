@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 interface NSFWDetectResponse {
   is_nsfw: boolean;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /**
