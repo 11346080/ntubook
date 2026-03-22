@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
-  const djangoApiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+  const djangoApiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api';
+  const fetchUrl = `${djangoApiBase}/accounts/me/`;
 
-  // Read app_token from browser cookie
   const appToken = request.cookies.get('app_token')?.value;
 
   if (!appToken) {
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const response = await fetch(`${djangoApiBase}/api/accounts/me/`, {
+    const response = await fetch(fetchUrl, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -20,14 +20,20 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const data = await response.json();
+    const rawText = await response.text();
+    let data: unknown;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      return NextResponse.json({ error: 'Backend unreachable', raw: rawText.slice(0, 200) }, { status: 502 });
+    }
 
     if (!response.ok) {
       return NextResponse.json(data, { status: response.status });
     }
 
     return NextResponse.json(data, { status: 200 });
-  } catch {
+  } catch (err) {
     return NextResponse.json({ error: 'Backend unreachable' }, { status: 502 });
   }
 }
