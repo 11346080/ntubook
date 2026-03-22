@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import AuthProvider from "./components/AuthProvider";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Script from "next/script";
+import { auth } from "../auth";
 
 export const metadata: Metadata = {
   title: "北商傳書 | NTUB 二手書平台",
@@ -12,11 +14,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const session = await auth();
   return (
     <html lang="zh-TW" className="h-100">
       <head>
@@ -37,8 +40,10 @@ export default function RootLayout({
         />
       </head>
       <body className="d-flex flex-column min-vh-100 antialiased">
+        {/* Auth */}
+        <AuthProvider session={session}>
         {/* Navbar */}
-        <Navbar initialAuth={false} unreadNotifications={0} />
+        <Navbar unreadNotifications={0} />
 
         {/* 主內容區 */}
         <main className="flex-shrink-0" style={{ marginTop: '80px', paddingBottom: '2rem' }}>
@@ -50,6 +55,7 @@ export default function RootLayout({
         {/* Footer */}
         <Footer />
 
+        </AuthProvider>
         {/* Bootstrap JS */}
         <Script
           src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { signOut, useSession } from 'next-auth/react';
 import styles from '../style/Navbar.module.css';
 
 interface NavbarProps {
@@ -11,8 +12,9 @@ interface NavbarProps {
   unreadNotifications?: number;
 }
 
-export default function Navbar({ initialAuth = false, unreadNotifications = 0 }: NavbarProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(initialAuth);
+export default function Navbar({ unreadNotifications = 0 }: NavbarProps) {
+  const { data: session } = useSession();
+  const isAuthenticated = !!session;
   const [logoError, setLogoError] = useState(false);
   const pathname = usePathname();
   const isHomePage = pathname === '/';
@@ -194,10 +196,7 @@ export default function Navbar({ initialAuth = false, unreadNotifications = 0 }:
             <div className={`${styles.authButtons}`}>
               {isAuthenticated ? (
                 <button
-                  onClick={() => {
-                    setIsAuthenticated(false);
-                    handleLinkClick();
-                  }}
+                  onClick={() => signOut({ callbackUrl: '/' })}
                   className={styles.logoutBtn}
                 >
                   登出
@@ -332,7 +331,7 @@ export default function Navbar({ initialAuth = false, unreadNotifications = 0 }:
           <nav>
             <ul className={styles.navList}>
               {navLinks.map((link, idx) => (
-                <li key={link.href} className={styles.navItem} style={{ '--delay': `${0.35 + idx * 0.07}s` } as any}>
+                <li key={link.href} className={styles.navItem} style={{ '--delay': `${0.35 + idx * 0.07}s` } as React.CSSProperties}>
                   <Link
                     href={link.href}
                     className={styles.navLink}

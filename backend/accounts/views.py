@@ -20,6 +20,16 @@ from .models import UserProfile
 class OAuthEntryView(TemplateView):
     template_name = 'accounts/login.html'
 
+    def dispatch(self, request, *args, **kwargs):
+        # Phase 1: redirect to Next.js login page to avoid two competing login UIs.
+        # Allauth + Google OAuth flow is preserved server-side but served via
+        # the frontend NextAuth.js entry at /login. The old Django template remains
+        # in place for future reference; restore here if you switch back to
+        # a full allauth / server-side OAuth flow.
+        from django.http import HttpResponseRedirect
+        frontend_base = 'http://localhost:3000'
+        return HttpResponseRedirect(f'{frontend_base}/login')
+
 
 # =============================================================================
 # 首次登入：建立 UserProfile（含 display_name、student_no、program_type、
