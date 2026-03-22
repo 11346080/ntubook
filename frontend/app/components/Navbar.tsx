@@ -354,7 +354,7 @@ export default function Navbar({ unreadNotifications = 0 }: NavbarProps) {
               {isAuthenticated ? (
                 <button
                   onClick={() => {
-                    setIsAuthenticated(false);
+                    signOut({ callbackUrl: '/' });
                     closeMenu();
                   }}
                   className={styles.mobileLogoutBtn}
