@@ -1,63 +1,73 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const DJANGO_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+const DJANGO_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api';
 
-function authedFetch(request: NextRequest, method: string) {
+async function djangoFetch(
+  request: NextRequest,
+  method: string,
+  body?: unknown,
+) {
   const appToken = request.cookies.get('app_token')?.value;
   if (!appToken) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return { status: 401, body: { error: 'Unauthorized' } };
   }
 
+  const url = `${DJANGO_BASE}/accounts/profile/`;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-App-Token': appToken,
   };
 
-  if (method === 'GET') {
-    return fetch(`${DJANGO_BASE}/api/accounts/profile/`, { method, headers });
+  const fetchOpts: RequestInit = { method, headers };
+  if (body) fetchOpts.body = JSON.stringify(body);
+
+  let djangoResponse: Response;
+  try {
+    djangoResponse = await fetch(url, fetchOpts);
+  } catch (err) {
+    return { status: 502, body: { error: 'Django unreachable', detail: String(err) } };
   }
 
-  return request.json().then(body =>
-    fetch(`${DJANGO_BASE}/api/accounts/profile/`, {
-      method,
-      headers,
-      body: JSON.stringify(body),
-    })
-  ).catch(() =>
-    NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-  );
+  // Read raw text first so we can handle both JSON and non-JSON responses
+  const rawText = await djangoResponse.text();
+
+  let data: unknown;
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    return {
+      status: djangoResponse.status,
+      body: { error: 'Django returned non-JSON', raw: rawText.slice(0, 200) },
+    };
+  }
+
+  return { status: djangoResponse.status, body: data };
 }
 
 export async function GET(request: NextRequest) {
-  const response = await authedFetch(request, 'GET');
-  if (response instanceof Response) {
-    const data = await response.json();
-    if (!response.ok) {
-      return NextResponse.json(data, { status: response.status });
-    }
-    return NextResponse.json(data, { status: response.status });
-  }
-  return response;
+  const { status, body } = await djangoFetch(request, 'GET');
+  return NextResponse.json(body, { status });
 }
 
 export async function POST(request: NextRequest) {
-  const response = await authedFetch(request, 'POST');
-  if (response instanceof Response) {
-    const data = await response.json();
-    return NextResponse.json(data, { status: response.status });
+  let parsed: unknown;
+  try {
+    parsed = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
-  return response;
+  const { status, body } = await djangoFetch(request, 'POST', parsed);
+  return NextResponse.json(body, { status });
 }
 
 export async function PATCH(request: NextRequest) {
-  const response = await authedFetch(request, 'PATCH');
-  if (response instanceof Response) {
-    const data = await response.json();
-    if (!response.ok) {
-      return NextResponse.json(data, { status: response.status });
-    }
-    return NextResponse.json(data, { status: response.status });
+  let parsed: unknown;
+  try {
+    parsed = await request.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
   }
-  return response;
+  const { status, body } = await djangoFetch(request, 'PATCH', parsed);
+  return NextResponse.json(body, { status });
 }

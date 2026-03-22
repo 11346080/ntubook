@@ -3,7 +3,8 @@ import { auth } from '@/auth';
 
 export async function GET() {
   const frontendBase = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
-  const djangoApiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+  // NOTE: NEXT_PUBLIC_API_URL already includes /api suffix from .env.local
+  const djangoApiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api';
 
   // 1. Get authenticated session (NextAuth JWT)
   const session = await auth();
@@ -28,7 +29,7 @@ export async function GET() {
 
   let bootstrapResponse: Response;
   try {
-    bootstrapResponse = await fetch(`${djangoApiBase}/api/accounts/bootstrap/`, {
+    bootstrapResponse = await fetch(`${djangoApiBase}/accounts/bootstrap/`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
