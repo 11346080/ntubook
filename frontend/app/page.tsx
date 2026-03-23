@@ -150,28 +150,21 @@ interface Listing {
   created_at: string;
   primary_image: {
     id: number;
-    file_path: string;
+    image_base64: string | null;  // base64 data URL (data:image/jpeg;base64,...)
+    mime_type: string;
+    file_name: string;
     is_primary: boolean;
     sort_order: number;
   } | null;
 }
 
 function LatestListingCard({ listing }: { listing: Listing }) {
-  // Build proper image URL - handle relative paths from backend
+  // Build proper image URL - handle base64 data URLs
   let imageUrl: string | null = null;
 
-  // Priority 1: Primary image from API (with URL construction)
-  if (listing.primary_image?.file_path) {
-    const filePath = listing.primary_image.file_path;
-    // Check if it's already a full URL
-    if (filePath.startsWith('http')) {
-      imageUrl = filePath;
-    } else {
-      // Build URL from relative path
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const backendUrl = API_BASE_URL.replace('/api', '');
-      imageUrl = `${backendUrl}/media/${filePath}`;
-    }
+  // Priority 1: Primary image from API (now returns base64 data URL)
+  if (listing.primary_image?.image_base64) {
+    imageUrl = listing.primary_image.image_base64;
   }
   // Priority 2: Book cover image
   else if (listing.cover_image_url) {

@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
-import ImageCarousel from './image-carousel';
 import styles from './listing-detail.module.css';
+import ClientListingDetail from './client-listing-detail';
 
 interface Book {
   id: number;
@@ -29,7 +29,9 @@ interface Seller {
 
 interface ListingImage {
   id: number;
-  file_path: string;
+  image_base64: string;  // base64 data URL (data:image/jpeg;base64,...)
+  mime_type: string;     // e.g., "image/jpeg"
+  file_name: string;     // e.g., "listing_1_img_1.jpeg"
   is_primary: boolean;
   sort_order: number;
 }
@@ -91,92 +93,7 @@ export default async function ListingDetailPage({
   const listing = await getListingDetail(id);
   if (!listing) return <NotFoundView />;
 
-  const book = listing.book;
-  const seller = listing.seller;
-  const price = parseFloat(listing.used_price).toFixed(2);
-
-  return (
-    <div className={styles.container}>
-      <div className={styles.wrapper}>
-        <div className={styles.imageSection}>
-          <ImageCarousel 
-            images={listing.images}
-            bookTitle={book?.title || '未知書籍'}
-            bookCoverUrl={book?.cover_image_url}
-          />
-        </div>
-
-        <div className={styles.infoSection}>
-          <div className={styles.headerArea}>
-            <h1 className={styles.bookTitle}>{book?.title || '未知書籍'}</h1>
-            <p className={styles.bookMeta}>
-              {book?.author_display && <span>{book.author_display}</span>}
-              {book?.author_display && book?.publisher && <span> • </span>}
-              {book?.publisher && <span>{book.publisher}</span>}
-            </p>
-            {book?.edition && <p className={styles.bookEdition}>版次: {book.edition}</p>}
-          </div>
-
-          <div className={styles.priceArea}>
-            <span className={styles.price}>NT$ {price}</span>
-          </div>
-
-          <div className={styles.tagsArea}>
-            <span className={styles.tag}>{listing.condition_level_display}</span>
-            {seller?.department && <span className={styles.tag}>{seller.department.name_zh}</span>}
-            {listing.origin_class_group && (
-              <span className={styles.tag}>
-                {listing.origin_academic_year} 年級 {listing.origin_term} 學期
-              </span>
-            )}
-          </div>
-
-          {(book?.isbn13 || book?.isbn10) && (
-            <div className={styles.isbnArea}>
-              {book.isbn13 && <p>ISBN-13: {book.isbn13}</p>}
-              {book.isbn10 && <p>ISBN-10: {book.isbn10}</p>}
-            </div>
-          )}
-
-          <div className={styles.divider} />
-
-          {(listing.description || listing.seller_note) && (
-            <div className={styles.descriptionArea}>
-              {listing.description && (
-                <div className={styles.descriptionBlock}>
-                  <h3 className={styles.descriptionTitle}>商品描述</h3>
-                  <p className={styles.descriptionText}>{listing.description}</p>
-                </div>
-              )}
-              {listing.seller_note && (
-                <div className={styles.descriptionBlock}>
-                  <h3 className={styles.descriptionTitle}>賣家備註</h3>
-                  <p className={styles.descriptionText}>{listing.seller_note}</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {seller && (
-            <div className={styles.sellerArea}>
-              <h3 className={styles.sellerTitle}>賣家資訊</h3>
-              <div className={styles.sellerInfo}>
-                <span className={styles.sellerName}>{seller.display_name}</span>
-                {seller.department && (
-                  <span className={styles.sellerDept}>{seller.department.name_zh}</span>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className={styles.ctaArea}>
-            <button className={styles.btnPrimary}>我要預約</button>
-            <button className={styles.btnSecondary}>加入收藏</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <ClientListingDetail listing={listing} />;
 }
 
 function NotFoundView() {

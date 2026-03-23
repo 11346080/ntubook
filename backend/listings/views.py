@@ -517,7 +517,7 @@ def create_listing_api(request):
             status=Listing.Status.AVAILABLE
         )
         
-        # 4. 處理圖片上傳
+        # 4. 處理圖片上傳 - 直接存到數據庫
         images = data.get('images', [])
         for idx, base64_string in enumerate(images, 1):
             try:
@@ -530,26 +530,23 @@ def create_listing_api(request):
                     ext = mime_type.split('/')[-1]  # jpeg, png, webp, gif
                 else:
                     base64_data = base64_string
+                    mime_type = 'image/jpeg'
                     ext = 'jpg'  # 預設副檔名
                 
-                # 解碼 base64
-                image_data = base64.b64decode(base64_data)
-                
-                # 建立 ContentFile 並保存為檔案
+                # 解碼 base64 為二進制
+                image_binary = base64.b64decode(base64_data)
                 file_name = f'listing_{listing.id}_img_{idx}.{ext}'
-                image_file = ContentFile(image_data, name=file_name)
                 
-                # 建立 ListingImage - 保存實際的檔案路徑字符串
-                file_path = f'listings/{listing.id}/{file_name}'
+                # 直接存到數據庫（不保存到文件系統）
                 listing_image = ListingImage.objects.create(
                     listing=listing,
-                    file_path=file_path,  # 存儲檔案路徑字符串，不是 ContentFile 物件
+                    image_binary=image_binary,  # 二進制數據直接存數據庫
+                    mime_type=mime_type,  # 保存 MIME type 以便前端正確顯示
+                    file_name=file_name,
                     is_primary=(idx == 1),  # 第一張為主圖
                     sort_order=idx - 1
                 )
-                
-                # 將檔案保存到存儲位置
-                default_storage.save(file_path, image_file)
+                print(f'✓ 圖片已存入數據庫: ListingImage {listing_image.id} ({file_name}, {len(image_binary)} bytes)')
                 
             except Exception as img_error:
                 print(f'圖片上傳錯誤 ({idx}): {str(img_error)}')

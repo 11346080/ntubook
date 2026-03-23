@@ -5,7 +5,9 @@ import styles from './image-carousel.module.css';
 
 interface ListingImage {
   id: number;
-  file_path: string;
+  image_base64: string | null;
+  mime_type: string;
+  file_name: string;
   is_primary: boolean;
   sort_order: number;
 }
@@ -24,17 +26,11 @@ export default function ImageCarousel({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [imageUrls, setImageUrls] = useState<(string | null)[]>([]);
 
-  // Build API-based image URLs on client side
+  // Use base64 image data directly from API
   useEffect(() => {
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-    const backendUrl = API_BASE_URL.replace('/api', '');
-
-    const urls = images.map((img) => {
-      if (img.file_path) {
-        return `${backendUrl}/media/${img.file_path}`;
-      }
-      return null;
-    });
+    const urls = images
+      .filter((img) => img.image_base64) // Only include images with base64 data
+      .map((img) => img.image_base64 as string);
 
     // Add fallback cover if available
     if (urls.length === 0 && bookCoverUrl) {

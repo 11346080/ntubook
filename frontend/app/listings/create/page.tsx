@@ -67,6 +67,7 @@ interface FormState {
   description: string;
   sellerNote?: string;
   images: File[];
+  imagePreviews: string[]; // Data URLs for persistent preview even if local files are deleted
 }
 
 interface ClassGroup {
@@ -154,6 +155,7 @@ export default function CreateListingPage() {
     description: '',
     sellerNote: '',
     images: [],
+    imagePreviews: [],
   });
 
   const [isbnInput, setIsbnInput] = useState('');
@@ -328,7 +330,18 @@ export default function CreateListingPage() {
     clearMessage();
 
     const validImages: File[] = [];
+    const validPreviews: string[] = [];
     const errors: string[] = [];
+
+    // 生成 data URL 的辅助函数
+    const generateDataUrl = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    };
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -366,11 +379,16 @@ export default function CreateListingPage() {
           continue;
         }
 
+        // 生成 data URL
+        const dataUrl = await generateDataUrl(file);
         validImages.push(file);
+        validPreviews.push(dataUrl);
       } catch (error) {
         console.error('NSFW Check Error:', error);
         // 检查失败时也允许上传
+        const dataUrl = await generateDataUrl(file);
         validImages.push(file);
+        validPreviews.push(dataUrl);
       }
     }
 
@@ -388,6 +406,7 @@ export default function CreateListingPage() {
     setFormState((prev) => ({
       ...prev,
       images: [...prev.images, ...validImages],
+      imagePreviews: [...prev.imagePreviews, ...validPreviews],
     }));
 
     if (errors.length > 0) {
@@ -413,6 +432,7 @@ export default function CreateListingPage() {
     setFormState((prev) => ({
       ...prev,
       images: prev.images.filter((_, i) => i !== index),
+      imagePreviews: prev.imagePreviews.filter((_, i) => i !== index),
     }));
   };
 
@@ -1032,10 +1052,10 @@ export default function CreateListingPage() {
             {/* 圖片預覽 */}
             {formState.images.length > 0 && (
               <div className={styles.imagePreviewList}>
-                {formState.images.map((file, idx) => (
+                {formState.imagePreviews.map((previewUrl, idx) => (
                   <div key={idx} className={styles.imagePreview}>
                     <img
-                      src={URL.createObjectURL(file)}
+                      src={previewUrl}
                       alt={`Preview ${idx + 1}`}
                       className={styles.imagePreviewImg}
                     />

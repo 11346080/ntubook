@@ -87,7 +87,7 @@ def visible_state_summary(obj):
 class ListingImageInline(admin.TabularInline):
     model = ListingImage
     extra = 1
-    fields = ['file_path', 'sort_order', 'is_primary', 'created_at']
+    fields = ['file_name', 'mime_type', 'sort_order', 'is_primary', 'created_at']
     readonly_fields = ['created_at']
     show_change_link = True
 
@@ -145,11 +145,11 @@ class ListingAdmin(admin.ModelAdmin):
 
 
 class ListingImageAdmin(admin.ModelAdmin):
-    list_display = ['id', 'listing', 'file_path', 'sort_order', 'is_primary', 'created_at']
+    list_display = ['id', 'listing', 'file_name', 'mime_type', 'sort_order', 'is_primary', 'created_at']
     list_display_links = ['id']
     list_select_related = ['listing', 'listing__book']
-    search_fields = ['listing__book__title', 'file_path']
-    list_filter = ['is_primary', 'listing__status']
+    search_fields = ['listing__book__title', 'file_name']
+    list_filter = ['is_primary', 'listing__status', 'mime_type']
     ordering = ['listing', 'sort_order']
     list_per_page = 100
     raw_id_fields = ['listing']

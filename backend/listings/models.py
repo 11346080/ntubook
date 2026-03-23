@@ -114,7 +114,9 @@ class ListingImage(models.Model):
         related_name='images',
         verbose_name='刊登'
     )
-    file_path = models.CharField(max_length=500, verbose_name='檔案路徑')
+    image_binary = models.BinaryField(verbose_name='圖片二進制數據', default=b'')  # 存圖片本身
+    mime_type = models.CharField(max_length=50, default='image/jpeg', verbose_name='MIME 類型')  # 如: image/jpeg, image/png
+    file_name = models.CharField(max_length=255, default='', verbose_name='原檔案名稱')  # 如: listing_1_img_1.jpeg
     sort_order = models.PositiveSmallIntegerField(default=0, verbose_name='排序值')
     is_primary = models.BooleanField(default=False, verbose_name='是否為首圖')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='建立時間')
@@ -130,4 +132,4 @@ class ListingImage(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.listing.id} - {self.file_path}"
+        return f"{self.listing.id} - {self.file_name}"
