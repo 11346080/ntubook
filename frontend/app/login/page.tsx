@@ -97,7 +97,7 @@ function LoginContent() {
 
 export default function LoginPage() {
   return (
-    <div style={{ marginTop: '3rem', marginBottom: '3rem' }}>
+    <div style={{ marginBottom: '3rem' }}>
       <div className="row justify-content-center">
         <div className="col-md-5 col-lg-4">
           <div

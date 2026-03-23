@@ -1,5 +1,13 @@
 from rest_framework import serializers
-from .models import ProgramType, Department, ClassGroup
+from .models import Campus, ProgramType, Department, ClassGroup
+
+
+class CampusSerializer(serializers.ModelSerializer):
+    """校區序列化器 / Campus Serializer"""
+
+    class Meta:
+        model = Campus
+        fields = ('id', 'code', 'name_zh', 'name_en', 'short_name')
 
 
 class ProgramTypeSerializer(serializers.ModelSerializer):
@@ -7,7 +15,7 @@ class ProgramTypeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProgramType
-        fields = '__all__'
+        fields = ('id', 'code', 'name_zh', 'name_en')
 
 
 class DepartmentSerializer(serializers.ModelSerializer):
@@ -15,7 +23,7 @@ class DepartmentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Department
-        fields = '__all__'
+        fields = ('id', 'code', 'name_zh', 'name_en', 'campus', 'program_type')
 
 
 class ClassGroupSerializer(serializers.ModelSerializer):
@@ -23,4 +31,4 @@ class ClassGroupSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ClassGroup
-        fields = '__all__'
+        fields = ('id', 'code', 'name_zh', 'grade_no', 'section_code', 'department', 'program_type')

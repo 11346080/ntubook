@@ -19,7 +19,8 @@ export default async function ListingsPage({
   const sort = params.sort || '-created_at';
 
   return (
-    <div className="container py-4 mt-4">
+    <div style={{ padding: '4rem 1rem 2rem 1rem' }}>
+      <div className="container py-4" style={{ maxWidth: '1200px', margin: '0 auto' }}>
       <div className="row">
         {/* 左側篩選欄 */}
         <aside className="col-lg-3 mb-4">
@@ -45,6 +46,7 @@ export default async function ListingsPage({
             <SearchResultsContent keyword={keyword} sort={sort} />
           </Suspense>
         </main>
+      </div>
       </div>
     </div>
   );

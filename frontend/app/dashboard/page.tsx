@@ -173,7 +173,7 @@ export default function DashboardPage() {
   const filteredClassGroups = classGroups.filter(c => String(c.department) === form.department_id);
 
   return (
-    <div className="mt-4">
+    <div style={{ padding: '4rem 1rem 2rem 1rem', maxWidth: '1200px', margin: '0 auto' }}>
       {/* 使用者檔案卡片 */}
       <div className="profile-card">
         <div className="profile-content">

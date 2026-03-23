@@ -169,7 +169,8 @@ function LatestListingCard({ listing }: { listing: Listing }) {
     } else {
       // Build URL from relative path
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      imageUrl = `${API_BASE_URL}/media/${filePath}`;
+      const backendUrl = API_BASE_URL.replace('/api', '');
+      imageUrl = `${backendUrl}/media/${filePath}`;
     }
   }
   // Priority 2: Book cover image
@@ -354,8 +355,8 @@ function RecommendedListingsSection() {
         setLoading(true);
         // 可改用推薦排序 API，如果後端有的話；否則用最新 API 取前 8 本
         const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-        const response = await fetch(`${API_BASE_URL}/api/listings/latest/`);
+        const backendUrl = API_BASE_URL.replace('/api', '');
+        const response = await fetch(`${backendUrl}/api/listings/latest/`);
         if (!response.ok) {
           throw new Error(`Failed to fetch: ${response.statusText}`);
         }
@@ -440,8 +441,8 @@ function LatestListingsSection() {
       try {
         setLoading(true);
         const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-
-        const response = await fetch(`${API_BASE_URL}/api/listings/latest/`);
+        const backendUrl = API_BASE_URL.replace('/api', '');
+        const response = await fetch(`${backendUrl}/api/listings/latest/`);
         if (!response.ok) {
           throw new Error(`Failed to fetch: ${response.statusText}`);
         }

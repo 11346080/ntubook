@@ -8,6 +8,9 @@
   background: transparent;
   border: none;
   z-index: 999;
+  height: 80px;
+  display: flex;
+  align-items: center;
 }
 
 .navContainer {

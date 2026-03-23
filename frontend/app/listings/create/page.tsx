@@ -56,9 +56,12 @@ interface FormState {
     isbn13?: string;
     isbn10?: string;
   };
+  campusId: string;
+  programTypeId: string;
+  departmentId: string;
+  classGroupId: string;
   originAcademicYear: string;
   originTerm: string;
-  originClassGroupId: string;
   usedPrice: string;
   conditionLevel: string;
   description: string;
@@ -68,8 +71,32 @@ interface FormState {
 
 interface ClassGroup {
   id: number;
-  name: string;
-  department?: string;
+  code: string;
+  name_zh: string;
+  grade_no: number;
+  section_code: string;
+  department: number;
+  program_type: number;
+}
+
+interface Campus {
+  id: number;
+  code: string;
+  name_zh: string;
+}
+
+interface ProgramType {
+  id: number;
+  code: string;
+  name_zh: string;
+}
+
+interface Department {
+  id: number;
+  code: string;
+  name_zh: string;
+  campus?: number;
+  program_type?: number;
 }
 
 interface Message {
@@ -100,8 +127,13 @@ export default function CreateListingPage() {
   const [isCheckingImage, setIsCheckingImage] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
+  
+  // 四級聯動選擇狀態
+  const [campusList, setCampusList] = useState<Campus[]>([]);
+  const [programTypeList, setProgramTypeList] = useState<ProgramType[]>([]);
+  const [departmentList, setDepartmentList] = useState<Department[]>([]);
   const [classGroups, setClassGroups] = useState<ClassGroup[]>([]);
-  const [isLoadingClassGroups, setIsLoadingClassGroups] = useState(false);
+  const [isLoadingData, setIsLoadingData] = useState(false);
 
   const [formState, setFormState] = useState<FormState>({
     book: {
@@ -111,9 +143,12 @@ export default function CreateListingPage() {
       isbn13: '',
       isbn10: '',
     },
+    campusId: '',
+    programTypeId: '',
+    departmentId: '',
+    classGroupId: '',
     originAcademicYear: '',
     originTerm: '1',
-    originClassGroupId: '',
     usedPrice: '',
     conditionLevel: '普通',
     description: '',
@@ -123,12 +158,12 @@ export default function CreateListingPage() {
 
   const [isbnInput, setIsbnInput] = useState('');
 
-  // 加載班級列表 + 初始化 CSRF token
+  // 加載四級選擇數據 + 初始化 CSRF token
   useEffect(() => {
-    const initializeAndFetchClassGroups = async () => {
-      setIsLoadingClassGroups(true);
+    const initializeAndFetchData = async () => {
+      setIsLoadingData(true);
       try {
-        // 1️⃣ 首先發送 GET 請求以初始化 CSRF token
+        // 1️⃣ 初始化 CSRF token
         console.log('🔐 Initializing CSRF token...');
         await fetch(`${API_BASE_URL}/listings/`, {
           method: 'GET',
@@ -136,24 +171,86 @@ export default function CreateListingPage() {
         });
         console.log('✓ CSRF token initialized');
 
-        // 2️⃣ 然後加載班級列表
-        const response = await fetch(`${API_BASE_URL}/core/class-groups/`);
-        if (!response.ok) throw new Error('Failed to load class groups');
-        const data = await response.json();
-        // API 返回格式: { success: true, data: [...] } 或 [...] 
-        const groups = Array.isArray(data) ? data : data.data || [];
-        setClassGroups(groups);
-        console.log(`✓ Loaded ${groups.length} class groups`);
+        // 2️⃣ 加載校區列表
+        const campusRes = await fetch(`${API_BASE_URL}/core/campuses/`);
+        if (campusRes.ok) {
+          const campusData = await campusRes.json();
+          const campuses = Array.isArray(campusData) ? campusData : campusData.data || [];
+          setCampusList(campuses);
+          console.log(`✓ Loaded ${campuses.length} campuses`);
+        }
+
+        // 3️⃣ 加載學制列表
+        const progRes = await fetch(`${API_BASE_URL}/core/program-types/`);
+        if (progRes.ok) {
+          const progData = await progRes.json();
+          const programs = Array.isArray(progData) ? progData : progData.data || [];
+          setProgramTypeList(programs);
+          console.log(`✓ Loaded ${programs.length} program types`);
+        }
       } catch (error) {
-        console.error('✗ Failed to load class groups:', error);
-        // 失敗時保持空列表，不中斷用戶體驗
+        console.error('✗ Failed to load base data:', error);
       } finally {
-        setIsLoadingClassGroups(false);
+        setIsLoadingData(false);
       }
     };
 
-    initializeAndFetchClassGroups();
+    initializeAndFetchData();
   }, []);
+
+  // 當選擇校區或學制時，加載科系列表
+  useEffect(() => {
+    if (!formState.campusId || !formState.programTypeId) {
+      setDepartmentList([]);
+      setFormState(prev => ({ ...prev, departmentId: '', classGroupId: '' }));
+      return;
+    }
+
+    const loadDepartments = async () => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/core/departments/?campus_id=${formState.campusId}&program_type_id=${formState.programTypeId}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          const depts = Array.isArray(data) ? data : data.data || [];
+          setDepartmentList(depts);
+          console.log(`✓ Loaded ${depts.length} departments`);
+        }
+      } catch (error) {
+        console.error('✗ Failed to load departments:', error);
+      }
+    };
+
+    loadDepartments();
+  }, [formState.campusId, formState.programTypeId]);
+
+  // 當選擇科系時，加載班級列表
+  useEffect(() => {
+    if (!formState.departmentId) {
+      setClassGroups([]);
+      setFormState(prev => ({ ...prev, classGroupId: '' }));
+      return;
+    }
+
+    const loadClassGroups = async () => {
+      try {
+        const response = await fetch(
+          `${API_BASE_URL}/core/class-groups/?department_id=${formState.departmentId}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          const groups = Array.isArray(data) ? data : data.data || [];
+          setClassGroups(groups);
+          console.log(`✓ Loaded ${groups.length} class groups`);
+        }
+      } catch (error) {
+        console.error('✗ Failed to load class groups:', error);
+      }
+    };
+
+    loadClassGroups();
+  }, [formState.departmentId]);
 
   // 清除提示訊息
   const clearMessage = useCallback(() => {
@@ -391,7 +488,10 @@ export default function CreateListingPage() {
       price: price,
       year: year,
       term: formState.originTerm,
-      classGroup: formState.originClassGroupId,
+      campus: formState.campusId,
+      programType: formState.programTypeId,
+      department: formState.departmentId,
+      classGroup: formState.classGroupId,
       images: formState.images.length,
     });
 
@@ -410,7 +510,10 @@ export default function CreateListingPage() {
     }
     
     if (!formState.originTerm) errors.push('學期');
-    if (!formState.originClassGroupId) errors.push('課程班級');
+    if (!formState.campusId) errors.push('校區');
+    if (!formState.programTypeId) errors.push('學制');
+    if (!formState.departmentId) errors.push('科系');
+    if (!formState.classGroupId) errors.push('班級');
     if (formState.images.length < 3) errors.push('商品圖片（需至少 3 張）');
 
     if (errors.length > 0) {
@@ -474,7 +577,7 @@ export default function CreateListingPage() {
         },
         origin_academic_year: parseInt(formState.originAcademicYear),
         origin_term: parseInt(formState.originTerm),
-        origin_class_group_id: parseInt(formState.originClassGroupId),
+        origin_class_group_id: parseInt(formState.classGroupId),
         used_price: parseFloat(formState.usedPrice),
         condition_level: mapConditionLevel(formState.conditionLevel),
         description: formState.description,
@@ -757,23 +860,103 @@ export default function CreateListingPage() {
               </div>
 
               <div className={styles.inputField}>
-                <label className={`${styles.label} ${styles.labelRequired}`}>課程班級</label>
+                <label className={`${styles.label} ${styles.labelRequired}`}>校區</label>
                 <select
                   className={styles.select}
-                  value={formState.originClassGroupId}
+                  value={formState.campusId}
                   onChange={(e) =>
                     setFormState((prev) => ({
                       ...prev,
-                      originClassGroupId: e.target.value,
+                      campusId: e.target.value,
                     }))
                   }
                 >
                   <option value="">
-                    {isLoadingClassGroups ? '加載中...' : '請選擇班級'}
+                    {isLoadingData ? '加載中...' : '請選擇校區'}
+                  </option>
+                  {campusList.map((campus) => (
+                    <option key={campus.id} value={campus.id}>
+                      {campus.name_zh}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.inputField}>
+                <label className={`${styles.label} ${styles.labelRequired}`}>學制</label>
+                <select
+                  className={styles.select}
+                  value={formState.programTypeId}
+                  onChange={(e) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      programTypeId: e.target.value,
+                    }))
+                  }
+                  disabled={!formState.campusId}
+                >
+                  <option value="">
+                    {!formState.campusId ? '請先選擇校區' : '請選擇學制'}
+                  </option>
+                  {programTypeList.map((program) => (
+                    <option key={program.id} value={program.id}>
+                      {program.name_zh}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.inputField}>
+                <label className={`${styles.label} ${styles.labelRequired}`}>科系</label>
+                <select
+                  className={styles.select}
+                  value={formState.departmentId}
+                  onChange={(e) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      departmentId: e.target.value,
+                    }))
+                  }
+                  disabled={!formState.campusId || !formState.programTypeId}
+                >
+                  <option value="">
+                    {!formState.campusId || !formState.programTypeId
+                      ? '請先選擇校區與學制'
+                      : departmentList.length === 0
+                      ? '無可用科系'
+                      : '請選擇科系'}
+                  </option>
+                  {departmentList.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name_zh}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className={styles.inputField}>
+                <label className={`${styles.label} ${styles.labelRequired}`}>班級</label>
+                <select
+                  className={styles.select}
+                  value={formState.classGroupId}
+                  onChange={(e) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      classGroupId: e.target.value,
+                    }))
+                  }
+                  disabled={!formState.departmentId}
+                >
+                  <option value="">
+                    {!formState.departmentId
+                      ? '請先選擇科系'
+                      : classGroups.length === 0
+                      ? '無可用班級'
+                      : '請選擇班級'}
                   </option>
                   {classGroups.map((group) => (
                     <option key={group.id} value={group.id}>
-                      {group.department ? `${group.department} - ${group.name}` : group.name}
+                      {group.name_zh}
                     </option>
                   ))}
                 </select>

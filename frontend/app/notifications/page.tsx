@@ -88,7 +88,7 @@ export default function NotificationsPage() {
   };
 
   return (
-    <div className="mt-4 mb-4">
+    <div style={{ padding: '4rem 1rem 2rem 1rem', maxWidth: '1200px', margin: '0 auto' }}>
       <h2 style={{ color: '#1A365D', marginBottom: '1.5rem' }}>
         <i className="fas fa-bell"></i> 通知
       </h2>

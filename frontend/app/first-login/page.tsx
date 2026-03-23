@@ -476,7 +476,7 @@ export default function FirstLoginPage() {
   }
 
   return (
-    <div className="container mt-4" style={{ maxWidth: 640 }}>
+    <div className="container" style={{ maxWidth: 640 }}>
       <nav aria-label="breadcrumb" className="mb-3">
         <ol className="breadcrumb">
           <li className="breadcrumb-item"><a href="/">首頁</a></li>
