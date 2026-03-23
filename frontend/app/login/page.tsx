@@ -52,7 +52,7 @@ function LoginContent() {
   return (
     <>
       <ErrorAlert />
-      <div className="text-center mb-4">
+      <div className="text-center mb-4 mt-6">
         <h3 className="mb-2" style={{ color: '#1A365D' }}>
           <i className="fas fa-sign-in-alt me-2"></i>登入
         </h3>
