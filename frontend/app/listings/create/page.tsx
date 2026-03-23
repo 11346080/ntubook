@@ -297,6 +297,9 @@ export default function CreateListingPage() {
             ...data.data,
           },
         }));
+        
+        // 同時更新 isbnInput 以顯示查詢到的 ISBN
+        setIsbnInput(data.data.isbn13 || data.data.isbn10 || isbnInput);
 
         setMessage({
           type: 'success',
@@ -586,11 +589,28 @@ export default function CreateListingPage() {
       const imageBase64List = await Promise.all(imagePromises);
       console.log(`✓ Converted ${imageBase64List.length} images`);
 
+      // 如果用户输入了ISBN但没有查询，使用输入值
+      let isbn13 = formState.book.isbn13 || '';
+      let isbn10 = formState.book.isbn10 || '';
+      
+      // 优先使用查询结果，其次使用用户输入
+      if (!isbn13 && !isbn10 && isbnInput.trim()) {
+        // 简单判断：如果输入长度是13就当isbn13，10就当isbn10
+        if (isbnInput.trim().replace(/[^0-9X]/g, '').length === 13) {
+          isbn13 = isbnInput.trim();
+        } else if (isbnInput.trim().replace(/[^0-9X]/g, '').length === 10) {
+          isbn10 = isbnInput.trim();
+        } else {
+          // 否则默认当isbn13
+          isbn13 = isbnInput.trim();
+        }
+      }
+
       // 构建提交数据
       const submitData = {
         new_book: {
-          isbn13: formState.book.isbn13 || '',
-          isbn10: formState.book.isbn10 || '',
+          isbn13: isbn13,
+          isbn10: isbn10,
           title: formState.book.title,
           author_display: formState.book.author,
           publisher: formState.book.publisher,
@@ -789,6 +809,38 @@ export default function CreateListingPage() {
                     setFormState((prev) => ({
                       ...prev,
                       book: { ...prev.book, publisher: e.target.value },
+                    }))
+                  }
+                />
+              </div>
+
+              <div className={styles.inputField}>
+                <label className={styles.label}>ISBN-13</label>
+                <input
+                  type="text"
+                  className={styles.input}
+                  placeholder="如: 978-957-0827-044"
+                  value={formState.book.isbn13 || ''}
+                  onChange={(e) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      book: { ...prev.book, isbn13: e.target.value },
+                    }))
+                  }
+                />
+              </div>
+
+              <div className={styles.inputField}>
+                <label className={styles.label}>ISBN-10</label>
+                <input
+                  type="text"
+                  className={styles.input}
+                  placeholder="如: 957-0827-044"
+                  value={formState.book.isbn10 || ''}
+                  onChange={(e) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      book: { ...prev.book, isbn10: e.target.value },
                     }))
                   }
                 />
