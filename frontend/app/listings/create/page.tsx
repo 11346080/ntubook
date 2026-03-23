@@ -67,6 +67,7 @@ interface FormState {
   description: string;
   sellerNote?: string;
   images: File[];
+  imagePreviews: string[]; // Data URLs for persistent preview even if local files are deleted
 }
 
 interface ClassGroup {
@@ -154,6 +155,7 @@ export default function CreateListingPage() {
     description: '',
     sellerNote: '',
     images: [],
+    imagePreviews: [],
   });
 
   const [isbnInput, setIsbnInput] = useState('');
@@ -295,6 +297,9 @@ export default function CreateListingPage() {
             ...data.data,
           },
         }));
+        
+        // 同時更新 isbnInput 以顯示查詢到的 ISBN
+        setIsbnInput(data.data.isbn13 || data.data.isbn10 || isbnInput);
 
         setMessage({
           type: 'success',
@@ -328,7 +333,18 @@ export default function CreateListingPage() {
     clearMessage();
 
     const validImages: File[] = [];
+    const validPreviews: string[] = [];
     const errors: string[] = [];
+
+    // 生成 data URL 的辅助函数
+    const generateDataUrl = (file: File): Promise<string> => {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    };
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -366,11 +382,16 @@ export default function CreateListingPage() {
           continue;
         }
 
+        // 生成 data URL
+        const dataUrl = await generateDataUrl(file);
         validImages.push(file);
+        validPreviews.push(dataUrl);
       } catch (error) {
         console.error('NSFW Check Error:', error);
         // 检查失败时也允许上传
+        const dataUrl = await generateDataUrl(file);
         validImages.push(file);
+        validPreviews.push(dataUrl);
       }
     }
 
@@ -388,6 +409,7 @@ export default function CreateListingPage() {
     setFormState((prev) => ({
       ...prev,
       images: [...prev.images, ...validImages],
+      imagePreviews: [...prev.imagePreviews, ...validPreviews],
     }));
 
     if (errors.length > 0) {
@@ -413,6 +435,7 @@ export default function CreateListingPage() {
     setFormState((prev) => ({
       ...prev,
       images: prev.images.filter((_, i) => i !== index),
+      imagePreviews: prev.imagePreviews.filter((_, i) => i !== index),
     }));
   };
 
@@ -566,11 +589,28 @@ export default function CreateListingPage() {
       const imageBase64List = await Promise.all(imagePromises);
       console.log(`✓ Converted ${imageBase64List.length} images`);
 
+      // 如果用户输入了ISBN但没有查询，使用输入值
+      let isbn13 = formState.book.isbn13 || '';
+      let isbn10 = formState.book.isbn10 || '';
+      
+      // 优先使用查询结果，其次使用用户输入
+      if (!isbn13 && !isbn10 && isbnInput.trim()) {
+        // 简单判断：如果输入长度是13就当isbn13，10就当isbn10
+        if (isbnInput.trim().replace(/[^0-9X]/g, '').length === 13) {
+          isbn13 = isbnInput.trim();
+        } else if (isbnInput.trim().replace(/[^0-9X]/g, '').length === 10) {
+          isbn10 = isbnInput.trim();
+        } else {
+          // 否则默认当isbn13
+          isbn13 = isbnInput.trim();
+        }
+      }
+
       // 构建提交数据
       const submitData = {
         new_book: {
-          isbn13: formState.book.isbn13 || '',
-          isbn10: formState.book.isbn10 || '',
+          isbn13: isbn13,
+          isbn10: isbn10,
           title: formState.book.title,
           author_display: formState.book.author,
           publisher: formState.book.publisher,
@@ -769,6 +809,38 @@ export default function CreateListingPage() {
                     setFormState((prev) => ({
                       ...prev,
                       book: { ...prev.book, publisher: e.target.value },
+                    }))
+                  }
+                />
+              </div>
+
+              <div className={styles.inputField}>
+                <label className={styles.label}>ISBN-13</label>
+                <input
+                  type="text"
+                  className={styles.input}
+                  placeholder="如: 978-957-0827-044"
+                  value={formState.book.isbn13 || ''}
+                  onChange={(e) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      book: { ...prev.book, isbn13: e.target.value },
+                    }))
+                  }
+                />
+              </div>
+
+              <div className={styles.inputField}>
+                <label className={styles.label}>ISBN-10</label>
+                <input
+                  type="text"
+                  className={styles.input}
+                  placeholder="如: 957-0827-044"
+                  value={formState.book.isbn10 || ''}
+                  onChange={(e) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      book: { ...prev.book, isbn10: e.target.value },
                     }))
                   }
                 />
@@ -1032,10 +1104,10 @@ export default function CreateListingPage() {
             {/* 圖片預覽 */}
             {formState.images.length > 0 && (
               <div className={styles.imagePreviewList}>
-                {formState.images.map((file, idx) => (
+                {formState.imagePreviews.map((previewUrl, idx) => (
                   <div key={idx} className={styles.imagePreview}>
                     <img
-                      src={URL.createObjectURL(file)}
+                      src={previewUrl}
                       alt={`Preview ${idx + 1}`}
                       className={styles.imagePreviewImg}
                     />

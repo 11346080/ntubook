@@ -150,6 +150,7 @@ class ListingImageAdmin(admin.ModelAdmin):
     list_select_related = ['listing', 'listing__book']
     search_fields = ['listing__book__title', 'file_name']
     list_filter = ['is_primary', 'listing__status']
+    list_filter = ['is_primary', 'listing__status', 'mime_type']
     ordering = ['listing', 'sort_order']
     list_per_page = 100
     raw_id_fields = ['listing']

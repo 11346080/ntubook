@@ -29,31 +29,22 @@ interface ListingCardItem {
   condition_level_display?: string;
   cover_image?: string;
   primary_image?: {
-    file_path?: string;
+    image_base64?: string | null;  // base64 data URL or null
     is_primary?: boolean;
   } | null;
 }
 
 export default function ListingCard({ listing }: { listing: ListingCardItem }) {
-  // Build proper image URL - handle relative paths from backend
+  // Build proper image URL - handle base64 data URLs and relative paths
   let coverImage: string | null = null;
 
   // Priority 1: Direct cover_image
   if (listing.cover_image) {
     coverImage = listing.cover_image;
   }
-  // Priority 2: Primary image from listings API
-  else if (listing.primary_image?.file_path) {
-    const filePath = listing.primary_image.file_path;
-    // Check if it's already a full URL
-    if (filePath.startsWith('http')) {
-      coverImage = filePath;
-    } else {
-      // Build URL from relative path
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-      const backendUrl = API_BASE_URL.replace('/api', '');
-      coverImage = `${backendUrl}/media/${filePath}`;
-    }
+  // Priority 2: Primary image from listings API (now returns base64 data URL)
+  else if (listing.primary_image?.image_base64) {
+    coverImage = listing.primary_image.image_base64;
   }
   // Priority 3: Book cover image
   else if (listing.book.cover_image_url) {

@@ -25,7 +25,9 @@ interface Seller {
 
 interface ListingImage {
   id: number;
-  file_path: string;
+  image_base64: string | null;  // base64 data URL (data:image/jpeg;base64,...)
+  mime_type: string;
+  file_name: string;
   is_primary: boolean;
   sort_order: number;
 }

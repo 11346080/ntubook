@@ -1,13 +1,25 @@
 from rest_framework import serializers
 from .models import Listing, ListingImage
+import base64
 
 
 class ListingImageSerializer(serializers.ModelSerializer):
-    """刊登圖片序列化器 / Listing Image Serializer"""
+    """刊登圖片序列化器 / Listing Image Serializer - 返回 base64 編碼的圖片"""
+    
+    image_base64 = serializers.SerializerMethodField()
 
     class Meta:
         model = ListingImage
         fields = ['id', 'file_name', 'mime_type', 'is_primary', 'sort_order']
+        fields = ['id', 'image_base64', 'mime_type', 'file_name', 'is_primary', 'sort_order']
+    
+    def get_image_base64(self, obj):
+        """將二進制圖片轉換為 base64 data URL"""
+        if obj.image_binary:
+            encoded = base64.b64encode(obj.image_binary).decode('utf-8')
+            # 返回 data URL 格式，前端可直接用到 <img src=...>
+            return f"data:{obj.mime_type};base64,{encoded}"
+        return None
 
 
 class BookListingSerializer(serializers.Serializer):
