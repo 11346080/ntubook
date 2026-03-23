@@ -7,7 +7,7 @@ class ListingImageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ListingImage
-        fields = ['id', 'file_path', 'is_primary', 'sort_order']
+        fields = ['id', 'file_name', 'mime_type', 'is_primary', 'sort_order']
 
 
 class BookListingSerializer(serializers.Serializer):

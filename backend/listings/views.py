@@ -2,8 +2,7 @@ from django.views.generic import ListView, DetailView, CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
-from django.core.files.base import ContentFile
-from django.core.files.storage import default_storage
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -535,21 +534,16 @@ def create_listing_api(request):
                 # 解碼 base64
                 image_data = base64.b64decode(base64_data)
                 
-                # 建立 ContentFile 並保存為檔案
+                # 建立 ListingImage - 存儲檔案名稱、圖片二進制資料和 MIME 類型
                 file_name = f'listing_{listing.id}_img_{idx}.{ext}'
-                image_file = ContentFile(image_data, name=file_name)
-                
-                # 建立 ListingImage - 保存實際的檔案路徑字符串
-                file_path = f'listings/{listing.id}/{file_name}'
                 listing_image = ListingImage.objects.create(
                     listing=listing,
-                    file_path=file_path,  # 存儲檔案路徑字符串，不是 ContentFile 物件
-                    is_primary=(idx == 1),  # 第一張為主圖
+                    file_name=file_name,
+                    image_binary=image_data,
+                    mime_type=mime_type,
+                    is_primary=(idx == 1),
                     sort_order=idx - 1
                 )
-                
-                # 將檔案保存到存儲位置
-                default_storage.save(file_path, image_file)
                 
             except Exception as img_error:
                 print(f'圖片上傳錯誤 ({idx}): {str(img_error)}')
