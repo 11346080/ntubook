@@ -1,11 +1,3 @@
-Read [](file:///c%3A/Users/aa096/Desktop/DBApp_%E6%9C%9F%E4%B8%AD_ntub_usedbooks/ntub_usedbooks/README.md)
-
-我來根據實際的項目架構和進度更新 README.md 文件： 
-
-Read memory [](file:///c%3A/Users/aa096/AppData/Roaming/Code/User/workspaceStorage/372405def1c6eb16c3b84f8ad6d303aa/GitHub.copilot-chat/memory-tool/memories/Njk1NjUzNGMtY2IyYy00Y2ZiLWI5ZjEtM2RjNmFjZGYzN2E3)
-
-根據實際的項目進度（W04、W05 已完成），我來為你更新 README.md：
-
 ```markdown
 # 北商傳書 (NTUB Used Books)
 
