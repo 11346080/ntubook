@@ -31,7 +31,6 @@ export default function RegisterPage() {
     }
 
     // TODO: 連接至註冊 API
-    console.log('註冊嘗試:', formData);
     alert('註冊成功！請檢查您的信箱以驗證帳號');
   };
 

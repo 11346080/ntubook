@@ -330,3 +330,13 @@ LOGGING = {
         },
     },
 }
+
+# ========== Django REST Framework Configuration ==========
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'accounts.authentication.AppTokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}

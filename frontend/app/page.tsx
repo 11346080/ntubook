@@ -346,19 +346,31 @@ function RecommendedListingsSection() {
     const fetchRecommendedListings = async () => {
       try {
         setLoading(true);
-        // 可改用推薦排序 API，如果後端有的話；否則用最新 API 取前 8 本
+        // 呼叫推薦 API（需要登入，失敗時返回空）
         const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         const backendUrl = API_BASE_URL.replace('/api', '');
-        const response = await fetch(`${backendUrl}/api/listings/latest/`);
+        const response = await fetch(`${backendUrl}/api/listings/recommended/`, {
+          credentials: 'include'  // 含入認證 Cookie
+        });
+        
+        if (response.status === 401) {
+          // 未登入，顯示空狀態
+          setListings([]);
+          setError(null);
+          return;
+        }
+        
         if (!response.ok) {
           throw new Error(`Failed to fetch: ${response.statusText}`);
         }
+        
         const data = await response.json();
-        setListings(Array.isArray(data.data) ? data.data : data.data?.results || []);
+        setListings(Array.isArray(data.data) ? data.data : []);
         setError(null);
       } catch (err) {
-        console.error('Error fetching recommended listings:', err);
-        setError('無法載入推薦書籍');
+        // Error fetching recommended listings
+        // 異常時不顯示錯誤，改為空狀態 (與後端推薦邏輯對齊)
+        setListings([]);
       } finally {
         setLoading(false);
       }
@@ -366,14 +378,6 @@ function RecommendedListingsSection() {
 
     fetchRecommendedListings();
   }, []);
-
-  if (error) {
-    return (
-      <section style={{ padding: '4rem 0', textAlign: 'center' }}>
-        <p style={{ color: 'var(--color-muted)' }}>{error}</p>
-      </section>
-    );
-  }
 
   return (
     <section style={{ padding: '4rem 0' }}>
@@ -391,7 +395,7 @@ function RecommendedListingsSection() {
           推薦書籍
         </h2>
         <p style={{ color: 'var(--color-text-secondary)', fontSize: '16px' }}>
-          跟你修同一門課的人都在用 - 傳承書單
+          大你一屆的學長姐都在用 - 傳承書單
         </p>
       </div>
 
@@ -403,7 +407,7 @@ function RecommendedListingsSection() {
         </div>
       ) : listings.length > 0 ? (
         <>
-          {/* 書籍網格 - 使用 CSS 限制數量 */}
+          {/* 書籍網格 */}
           <div
             className="recommended-listings-grid"
             style={{
@@ -418,7 +422,16 @@ function RecommendedListingsSection() {
             ))}
           </div>
         </>
-      ) : null}
+      ) : (
+        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--color-muted)' }}>
+          <p style={{ fontSize: '16px', lineHeight: '1.6' }}>
+            墨跡未乾，目前暫無相關藏書...
+          </p>
+          <p style={{ fontSize: '14px', marginTop: '0.5rem', color: 'var(--color-text-secondary)' }}>
+            您可以成為第一位分享者!!
+          </p>
+        </div>
+      )}
     </section>
   );
 }
@@ -435,7 +448,11 @@ function LatestListingsSection() {
         setLoading(true);
         const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         const backendUrl = API_BASE_URL.replace('/api', '');
-        const response = await fetch(`${backendUrl}/api/listings/latest/`);
+        const response = await fetch(`${backendUrl}/api/listings/latest/`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+        });
         if (!response.ok) {
           throw new Error(`Failed to fetch: ${response.statusText}`);
         }
@@ -443,7 +460,7 @@ function LatestListingsSection() {
         setListings(Array.isArray(data.data) ? data.data : data.data?.results || []);
         setError(null);
       } catch (err) {
-        console.error('Error fetching listings:', err);
+        // Error fetching listings
         setError('無法載入最新書籍');
       } finally {
         setLoading(false);
@@ -515,7 +532,18 @@ function LatestListingsSection() {
             </Link>
           </div>
         </>
-      ) : null}
+      ) : (
+        <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--color-muted)' }}>
+          <p style={{ fontSize: '16px', lineHeight: '1.6' }}>
+            墨色未浸，暫無最新上架...
+          </p>
+          <p style={{ fontSize: '14px', marginTop: '0.5rem' }}>
+            <Link href="/listings/create" style={{ color: 'var(--color-seal)', textDecoration: 'none' }}>
+              立即刊登您的藏書
+            </Link>
+          </p>
+        </div>
+      )}
     </section>
   );
 }
@@ -616,8 +644,9 @@ export default function HomePage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    // 使用 keyword 作為查詢參數
     const params = new URLSearchParams();
-    if (query) params.set('q', query);
+    if (query) params.set('keyword', query);
     if (category) params.set('category', category);
     if (condition) params.set('condition', condition);
     // 導航到書籍列表頁面（/listings 是現有的頁面）

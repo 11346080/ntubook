@@ -192,7 +192,7 @@ export default function Navbar({ unreadNotifications = 0 }: NavbarProps) {
               )}
             </Link>
 
-            {/* 登入/註冊 */}
+            {/* 登入 */}
             <div className={`${styles.authButtons}`}>
               {isAuthenticated ? (
                 <button
@@ -202,22 +202,13 @@ export default function Navbar({ unreadNotifications = 0 }: NavbarProps) {
                   登出
                 </button>
               ) : (
-                <>
-                  <Link
-                    href="/login"
-                    onClick={handleLinkClick}
-                    className={styles.loginBtn}
-                  >
-                    登入
-                  </Link>
-                  <Link
-                    href="/register"
-                    onClick={handleLinkClick}
-                    className={styles.registerBtn}
-                  >
-                    註冊
-                  </Link>
-                </>
+                <Link
+                  href="/login"
+                  onClick={handleLinkClick}
+                  className={styles.loginBtn}
+                >
+                  登入
+                </Link>
               )}
             </div>
           </div>
@@ -361,22 +352,13 @@ export default function Navbar({ unreadNotifications = 0 }: NavbarProps) {
                   登出
                 </button>
               ) : (
-                <>
-                  <Link
-                    href="/login"
-                    onClick={closeMenu}
-                    className={styles.mobileLoginBtn}
-                  >
-                    登入
-                  </Link>
-                  <Link
-                    href="/register"
-                    onClick={closeMenu}
-                    className={styles.mobileRegisterBtn}
-                  >
-                    註冊
-                  </Link>
-                </>
+                <Link
+                  href="/login"
+                  onClick={closeMenu}
+                  className={styles.mobileLoginBtn}
+                >
+                  登入
+                </Link>
               )}
             </div>
           </nav>

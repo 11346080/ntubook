@@ -12,10 +12,12 @@ class Listing(models.Model):
         POOR = 'POOR', '差'
 
     class Status(models.TextChoices):
+        PENDING = 'PENDING', '待審核'
         AVAILABLE = 'AVAILABLE', '可購買'
         RESERVED = 'RESERVED', '已保留'
         SOLD = 'SOLD', '已售出'
         OFF_SHELF = 'OFF_SHELF', '已下架'
+        REJECTED = 'REJECTED', '已退回'
         REMOVED = 'REMOVED', '已移除'
         DELETED = 'DELETED', '已刪除'
 
@@ -55,10 +57,11 @@ class Listing(models.Model):
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
-        default=Status.AVAILABLE,
+        default=Status.PENDING,
         verbose_name='刊登狀態'
     )
     off_shelf_reason = models.CharField(max_length=255, blank=True, null=True, verbose_name='下架原因')
+    reject_reason = models.CharField(max_length=500, blank=True, null=True, verbose_name='退回原因')
     accepted_request = models.ForeignKey(
         'purchase_requests.PurchaseRequest',
         on_delete=models.SET_NULL,

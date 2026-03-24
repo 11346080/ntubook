@@ -1,5 +1,8 @@
 'use client';
 
+import { useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import styles from './listing-detail.module.css';
 import ImageCarousel from './image-carousel';
 
@@ -69,9 +72,108 @@ interface ClientListingDetailProps {
 export default function ClientListingDetail({
   listing,
 }: ClientListingDetailProps) {
+  const { data: session } = useSession();
+  const router = useRouter();
   const book = listing.book;
   const seller = listing.seller;
   const price = parseFloat(listing.used_price).toFixed(2);
+  
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [isLoadingFavorite, setIsLoadingFavorite] = useState(false);
+  const [showReserveModal, setShowReserveModal] = useState(false);
+  const [reserveMessage, setReserveMessage] = useState('');
+  const [isSubmittingReserve, setIsSubmittingReserve] = useState(false);
+
+  // 處理加入/移除收藏
+  const handleToggleFavorite = async () => {
+    // 檢查使用者是否已登入
+    if (!session?.user) {
+      const confirmed = window.confirm(
+        '此操作需要登入。是否前往登入頁面？\n\nThis action requires login. Go to login page?'
+      );
+      if (confirmed) {
+        const currentPath = window.location.pathname + window.location.search;
+        router.push(`/login?callbackUrl=${encodeURIComponent(currentPath)}`);
+      }
+      return;
+    }
+
+    setIsLoadingFavorite(true);
+    try {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+      const method = isFavorited ? 'DELETE' : 'POST';
+      const response = await fetch(`${API_BASE_URL}/books/${book?.id}/favorite/`, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+
+      if (response.ok) {
+        setIsFavorited(!isFavorited);
+      } else if (response.status === 401) {
+        alert('您的登入已過期，請重新登入');
+        router.push('/login');
+      } else {
+        alert('操作失敗，請稍後重試');
+      }
+    } catch (error) {
+      // Toggle favorite error
+      alert('無法連接伺服器');
+    } finally {
+      setIsLoadingFavorite(false);
+    }
+  };
+
+  // 處理送出預約
+  const handleSubmitReserve = async () => {
+    // 檢查使用者是否已登入
+    if (!session?.user) {
+      const confirmed = window.confirm(
+        '此操作需要登入。是否前往登入頁面？\n\nThis action requires login. Go to login page?'
+      );
+      if (confirmed) {
+        const currentPath = window.location.pathname + window.location.search;
+        router.push(`/login?callbackUrl=${encodeURIComponent(currentPath)}`);
+      }
+      return;
+    }
+
+    if (!reserveMessage.trim()) {
+      alert('請填寫留言');
+      return;
+    }
+
+    setIsSubmittingReserve(true);
+    try {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+      const response = await fetch(`${API_BASE_URL}/listings/${listing.id}/requests/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          buyer_message: reserveMessage,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('預約成功！');
+        setShowReserveModal(false);
+        setReserveMessage('');
+      } else if (response.status === 401) {
+        alert('您的登入已過期，請重新登入');
+        router.push('/login');
+      } else {
+        alert(data.error?.message || '預約失敗，請稍後重試');
+      }
+    } catch (error) {
+      // Reserve error
+      alert('無法連接伺服器');
+    } finally {
+      setIsSubmittingReserve(false);
+    }
+  };
 
   return (
     <div className={styles.container}>
@@ -162,9 +264,89 @@ export default function ClientListingDetail({
           )}
 
           <div className={styles.ctaArea}>
-            <button className={styles.btnPrimary}>我要預約</button>
-            <button className={styles.btnSecondary}>加入收藏</button>
+            <button 
+              className={styles.btnPrimary}
+              onClick={() => {
+                if (!session?.user) {
+                  const confirmed = window.confirm(
+                    '此操作需要登入。是否前往登入頁面？\n\nThis action requires login. Go to login page?'
+                  );
+                  if (confirmed) {
+                    const currentPath = window.location.pathname + window.location.search;
+                    router.push(`/login?callbackUrl=${encodeURIComponent(currentPath)}`);
+                  }
+                } else {
+                  setShowReserveModal(true);
+                }
+              }}
+              disabled={isSubmittingReserve}
+            >
+              我要預約
+            </button>
+            <button 
+              className={styles.btnSecondary}
+              onClick={handleToggleFavorite}
+              disabled={isLoadingFavorite}
+              style={{
+                backgroundColor: isFavorited ? '#9b2335' : 'transparent',
+                color: isFavorited ? '#f5edd8' : '#9b2335',
+              }}
+            >
+              {isFavorited ? '❤️ 已收藏' : '🤍 加入收藏'}
+            </button>
           </div>
+
+          {/* 預約模態框 */}
+          {showReserveModal && (
+            <div className={styles.modalOverlay} onClick={() => setShowReserveModal(false)}>
+              <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+                <div className={styles.modalHeader}>
+                  <h2>我要預約</h2>
+                  <button 
+                    className={styles.closeBtn}
+                    onClick={() => setShowReserveModal(false)}
+                  >
+                    ✕
+                  </button>
+                </div>
+                
+                <div className={styles.modalBody}>
+                  <p className={styles.bookInfo}>
+                    <strong>{book?.title}</strong><br />
+                    NT$ {price}
+                  </p>
+                  
+                  <label htmlFor="reserveMessage" className={styles.label}>
+                    給賣家的留言
+                  </label>
+                  <textarea
+                    id="reserveMessage"
+                    className={styles.textarea}
+                    placeholder="例如：何時可交貨？可否議價？"
+                    value={reserveMessage}
+                    onChange={(e) => setReserveMessage(e.target.value)}
+                    rows={4}
+                  />
+                </div>
+
+                <div className={styles.modalFooter}>
+                  <button 
+                    className={styles.btnCancel}
+                    onClick={() => setShowReserveModal(false)}
+                  >
+                    取消
+                  </button>
+                  <button 
+                    className={styles.btnConfirm}
+                    onClick={handleSubmitReserve}
+                    disabled={isSubmittingReserve}
+                  >
+                    {isSubmittingReserve ? '送出中...' : '確認預約'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

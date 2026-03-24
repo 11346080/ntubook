@@ -2,6 +2,41 @@ from rest_framework import serializers
 from .models import Listing, ListingImage
 import base64
 
+# 敏感詞清單（繁體中文）- 與前端一致
+SENSITIVE_WORDS = [
+    # 賭博相關
+    '博彩', '賭博', '賭錢', '娛樂城',
+    # 毒品相關
+    '毒品', '大麻', '海洛因', '冰毒', '搖頭丸',
+    # 色情相關
+    '色情', '淫穢', '黃色', '18禁',
+    # 暴力相關
+    '暴力', '恐怖', '炸彈', '槍支',
+    # 詐騙相關
+    '詐騙', '欺詐', '洗錢', '非法',
+    # 違法相關
+    '走私', '販毒', '販運',
+    # 仇恨相關
+    '仇恨', '歧視', '恐怖分子',
+    # 平台特定的敏感詞
+    '假貨', '假冒', '翻新', '來路不明',
+]
+
+def check_sensitive_words(text: str) -> list:
+    """檢查文本中的敏感詞，返回找到的敏感詞列表"""
+    if not text:
+        return []
+    
+    found_words = []
+    lower_text = text.lower()
+    
+    for word in SENSITIVE_WORDS:
+        if word.lower() in lower_text:
+            if word not in found_words:
+                found_words.append(word)
+    
+    return found_words
+
 
 class ListingImageSerializer(serializers.ModelSerializer):
     """刊登圖片序列化器 / Listing Image Serializer - 返回 base64 編碼的圖片"""
@@ -323,6 +358,24 @@ class ListingCreateSerializer(serializers.Serializer):
         if not images or len(images) < 3:
             raise serializers.ValidationError({
                 'images': '至少需要上傳 3 張圖片'
+            })
+        
+        # ✨ 新增：敏感詞檢查
+        # 檢查 new_book 中的 title
+        if new_book:
+            title = new_book.get('title', '')
+            sensitive_in_title = check_sensitive_words(title)
+            if sensitive_in_title:
+                raise serializers.ValidationError({
+                    'new_book': f'用詞似有不妥，請重新斟酌筆墨...（敏感詞：{", ".join(sensitive_in_title)}）'
+                })
+        
+        # 檢查 description
+        description = data.get('description', '')
+        sensitive_in_desc = check_sensitive_words(description)
+        if sensitive_in_desc:
+            raise serializers.ValidationError({
+                'description': f'用詞似有不妥，請重新斟酌筆墨...（敏感詞：{", ".join(sensitive_in_desc)}）'
             })
         
         return data

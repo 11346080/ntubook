@@ -92,7 +92,13 @@ export default function SearchResultsContent({
         params.append('page_size', '24');
 
         const url = `${API_BASE_URL}/listings/?${params.toString()}`;
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
         if (!response.ok) {
           throw new Error(`API error: ${response.status}`);
@@ -110,7 +116,7 @@ export default function SearchResultsContent({
           currentPage,
         });
       } catch (err) {
-        console.error('Failed to fetch listings:', err);
+        // Error fetching listings
         setError(
           err instanceof Error
             ? err.message

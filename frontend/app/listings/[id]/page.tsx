@@ -79,7 +79,7 @@ async function getListingDetail(id: string): Promise<ListingDetailData | null> {
     const data: ApiResponse = await response.json();
     return data.success && data.data ? data.data : null;
   } catch (error) {
-    console.error('Error:', error);
+    // Error fetching listing details
     return null;
   }
 }

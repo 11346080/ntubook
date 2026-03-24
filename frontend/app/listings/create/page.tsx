@@ -100,6 +100,18 @@ interface Department {
   program_type?: number;
 }
 
+interface ProfileResponse {
+  id: number;
+  display_name: string;
+  student_no: string | null;
+  program_type_id: number | null;
+  department_id: number | null;
+  class_group_id: number | null;
+  grade_no: number | null;
+  contact_email: string | null;
+  avatar_url: string | null;
+}
+
 interface Message {
   type: 'error' | 'success' | 'warning' | 'info';
   title: string;
@@ -135,6 +147,8 @@ export default function CreateListingPage() {
   const [departmentList, setDepartmentList] = useState<Department[]>([]);
   const [classGroups, setClassGroups] = useState<ClassGroup[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(false);
+  const [userProfile, setUserProfile] = useState<ProfileResponse | null>(null);
+  const [userGradeDisplay, setUserGradeDisplay] = useState<string>('');
 
   const [formState, setFormState] = useState<FormState>({
     book: {
@@ -160,18 +174,37 @@ export default function CreateListingPage() {
 
   const [isbnInput, setIsbnInput] = useState('');
 
-  // 加載四級選擇數據 + 初始化 CSRF token
+  // 加載四級選擇數據 + 初始化 CSRF token + 获取用户信息
   useEffect(() => {
     const initializeAndFetchData = async () => {
       setIsLoadingData(true);
       try {
-        // 1️⃣ 初始化 CSRF token
-        console.log('🔐 Initializing CSRF token...');
+        // 需要孤立字段
         await fetch(`${API_BASE_URL}/listings/`, {
           method: 'GET',
           credentials: 'include',
         });
-        console.log('✓ CSRF token initialized');
+        // CSRF token initialized
+        const profileRes = await fetch('/api/accounts/profile/', {
+          method: 'GET',
+          credentials: 'include',
+        });
+        if (profileRes.ok) {
+          const profile: ProfileResponse = await profileRes.json();
+          setUserProfile(profile);
+          // 計算顯示年級（用戶年級 - 1）
+          if (profile.grade_no) {
+            const displayGrade = profile.grade_no - 1;
+            setUserGradeDisplay(
+              displayGrade === 1 ? '一年級' : 
+              displayGrade === 2 ? '二年級' : 
+              displayGrade === 3 ? '三年級' : 
+              displayGrade === 4 ? '四年級' : 
+              `${displayGrade}年級`
+            );
+          }
+          // User profile loaded
+        }
 
         // 2️⃣ 加載校區列表
         const campusRes = await fetch(`${API_BASE_URL}/core/campuses/`);
@@ -179,7 +212,7 @@ export default function CreateListingPage() {
           const campusData = await campusRes.json();
           const campuses = Array.isArray(campusData) ? campusData : campusData.data || [];
           setCampusList(campuses);
-          console.log(`✓ Loaded ${campuses.length} campuses`);
+          // Campuses loaded
         }
 
         // 3️⃣ 加載學制列表
@@ -188,10 +221,10 @@ export default function CreateListingPage() {
           const progData = await progRes.json();
           const programs = Array.isArray(progData) ? progData : progData.data || [];
           setProgramTypeList(programs);
-          console.log(`✓ Loaded ${programs.length} program types`);
+          // Program types loaded
         }
       } catch (error) {
-        console.error('✗ Failed to load base data:', error);
+        // Failed to load base data
       } finally {
         setIsLoadingData(false);
       }
@@ -199,6 +232,62 @@ export default function CreateListingPage() {
 
     initializeAndFetchData();
   }, []);
+
+  // 自動填充用戶信息（當所有數據都加載完後）
+  useEffect(() => {
+    if (!userProfile || !campusList.length || !programTypeList.length) {
+      return;
+    }
+
+    // 如果用戶有部門和學制信息，自動加載科系然後自動選擇
+    if (userProfile.program_type_id && userProfile.department_id) {
+      const loadAndAutoFill = async () => {
+        try {
+          
+          // 獲取該學制的所有科系
+          const response = await fetch(
+            `${API_BASE_URL}/core/departments/?program_type_id=${userProfile.program_type_id}`
+          );
+          
+          if (response.ok) {
+            const data = await response.json();
+            const depts = Array.isArray(data) ? data : data.data || [];
+            setDepartmentList(depts);
+            
+            // 找到用戶所在的科系
+            const userDept = depts.find((d: Department) => d.id === userProfile.department_id);
+            
+            if (userDept) {
+              
+              // 從科系的campus字段確定校區
+              let campusId = '';
+              if (userDept.campus) {
+                const campus = campusList.find(c => c.id === userDept.campus);
+                if (campus) {
+                  campusId = String(campus.id);
+                  // 校區 determined
+                }
+              }
+              
+              // 自動填充表單
+              setFormState(prev => ({
+                ...prev,
+                campusId,
+                programTypeId: String(userProfile.program_type_id),
+                departmentId: String(userProfile.department_id),
+                classGroupId: String(userProfile.class_group_id || ''),
+              }));
+              // User info auto-filled
+            }
+          }
+        } catch (error) {
+          // Auto-fill failed
+        }
+      };
+      
+      loadAndAutoFill();
+    }
+  }, [userProfile, campusList, programTypeList]);
 
   // 當選擇校區或學制時，加載科系列表
   useEffect(() => {
@@ -217,10 +306,9 @@ export default function CreateListingPage() {
           const data = await response.json();
           const depts = Array.isArray(data) ? data : data.data || [];
           setDepartmentList(depts);
-          console.log(`✓ Loaded ${depts.length} departments`);
         }
       } catch (error) {
-        console.error('✗ Failed to load departments:', error);
+        // Failed to load departments
       }
     };
 
@@ -244,10 +332,10 @@ export default function CreateListingPage() {
           const data = await response.json();
           const groups = Array.isArray(data) ? data : data.data || [];
           setClassGroups(groups);
-          console.log(`✓ Loaded ${groups.length} class groups`);
+          // Class groups loaded
         }
       } catch (error) {
-        console.error('✗ Failed to load class groups:', error);
+        // Failed to load class groups
       }
     };
 
@@ -314,7 +402,7 @@ export default function CreateListingPage() {
         });
       }
     } catch (error) {
-      console.error('ISBN Query Error:', error);
+      // ISBN query error
       setMessage({
         type: 'warning',
         title: '無法連接',
@@ -387,8 +475,7 @@ export default function CreateListingPage() {
         validImages.push(file);
         validPreviews.push(dataUrl);
       } catch (error) {
-        console.error('NSFW Check Error:', error);
-        // 检查失败时也允许上传
+        // NSFW check error - allow upload anyway
         const dataUrl = await generateDataUrl(file);
         validImages.push(file);
         validPreviews.push(dataUrl);
@@ -489,7 +576,7 @@ export default function CreateListingPage() {
       }
     }
 
-    console.log(`🔐 CSRF Token (${cookieValue ? '✓ found' : '✗ not found'}): ${cookieValue ? cookieValue.substring(0, 10) + '...' : 'undefined'}`);
+    // CSRF token obtained
     return cookieValue;
   };
 
@@ -497,27 +584,12 @@ export default function CreateListingPage() {
     e.preventDefault();
     clearMessage();
 
-    console.log('📋 Validating form...');
-
     // 验证必填字段
     const errors: string[] = [];
     const price = parseFloat(formState.usedPrice);
     const year = parseInt(formState.originAcademicYear);
 
-    console.log('📊 Form state:', {
-      title: formState.book.title,
-      author: formState.book.author,
-      publisher: formState.book.publisher,
-      price: price,
-      year: year,
-      term: formState.originTerm,
-      campus: formState.campusId,
-      programType: formState.programTypeId,
-      department: formState.departmentId,
-      classGroup: formState.classGroupId,
-      images: formState.images.length,
-    });
-
+    // Form validation
     if (!formState.book.title?.trim()) errors.push('書名');
     if (!formState.book.author?.trim()) errors.push('作者');
     if (!formState.book.publisher?.trim()) errors.push('出版社');
@@ -540,7 +612,6 @@ export default function CreateListingPage() {
     if (formState.images.length < 3) errors.push('商品圖片（需至少 3 張）');
 
     if (errors.length > 0) {
-      console.log('❌ Missing fields:', errors);
       setMessage({
         type: 'error',
         title: '遺漏必填項目',
@@ -549,15 +620,13 @@ export default function CreateListingPage() {
       return;
     }
 
-    console.log('✓ Form validation passed');
-
+    // Form validation passed\n
     // 检查敏感词
     const titleSensitive = checkSensitiveWords(formState.book.title);
     const descriptionSensitive = checkSensitiveWords(formState.description);
     const allSensitive = [...new Set([...titleSensitive, ...descriptionSensitive])];
 
     if (allSensitive.length > 0) {
-      console.log('⚠️ Sensitive words found:', allSensitive);
       setMessage({
         type: 'error',
         title: '用詞不妥',
@@ -570,10 +639,9 @@ export default function CreateListingPage() {
     setIsSubmitting(true);
 
     try {
-      console.log('📤 Starting submission...');
+      // Starting submission
       
       // 转换图片为 base64
-      console.log('📸 Converting images to base64...');
       const imagePromises = formState.images.map(
         (file) =>
           new Promise<string>((resolve, reject) => {
@@ -587,7 +655,7 @@ export default function CreateListingPage() {
       );
 
       const imageBase64List = await Promise.all(imagePromises);
-      console.log(`✓ Converted ${imageBase64List.length} images`);
+      // Images converted
 
       // 如果用户输入了ISBN但没有查询，使用输入值
       let isbn13 = formState.book.isbn13 || '';
@@ -625,18 +693,13 @@ export default function CreateListingPage() {
         images: imageBase64List,
       };
 
-      console.log('📦 Submit data prepared:', {
-        book: submitData.new_book,
-        price: submitData.used_price,
-        images: imageBase64List.length,
-      });
+      // Submit data prepared
 
       // 获取 CSRF 令牌
       const csrfToken = getCsrfToken();
-      console.log('🔐 CSRF token:', csrfToken ? '✓ Found' : '✗ Not found');
+      // CSRF token obtained
 
       // 提交至 Django 后端
-      console.log(`🔗 Posting to ${API_BASE_URL}/listings/...`);
       const response = await fetch(`${API_BASE_URL}/listings/`, {
           method: 'POST',
           headers: {
@@ -648,7 +711,7 @@ export default function CreateListingPage() {
         }
       );
 
-      console.log(`📨 Response status:`, response.status, response.statusText);
+      // Response received
       
       // Parse response safely
       let responseData;
@@ -658,29 +721,28 @@ export default function CreateListingPage() {
         responseData = await response.json();
       } else {
         const text = await response.text();
-        console.error('❌ Non-JSON response:', text.substring(0, 200));
+        // Non-JSON response
         throw new Error('Server returned non-JSON response');
       }
 
-      console.log('✓ Response received:', responseData.success ? '成功' : '失敗');
+      // Response data processed
 
       if (responseData.success && responseData.data?.id) {
-        console.log(`🎉 Listing created with ID: ${responseData.data.id}`);
+        // Listing created successfully
         
+        // 顯示審核中的提示訊息
         setMessage({
           type: 'success',
-          title: '刊登成功',
-          content: '感謝您的分享，書籍已成功上架！',
+          title: '書卷已遞交',
+          content: '小二正在為您審核，請稍候...（通常在 1 分鐘內完成）',
         });
 
-        // 延迟 1.5 秒后跳转
-        console.log('⏱️ Waiting 1.5s before redirect...');
+        // 延遲 2 秒後導向會員中心
         setTimeout(() => {
-          console.log(`📍 Redirecting to /listings/${responseData.data.id}`);
-          router.push(`/listings/${responseData.data.id}`);
-        }, 1500);
+          router.push('/dashboard');
+        }, 2000);
       } else {
-        console.error('❌ Submission failed:', responseData.error);
+        // Submission failed
         
         setMessage({
           type: 'error',
@@ -690,7 +752,7 @@ export default function CreateListingPage() {
         });
       }
     } catch (error) {
-      console.error('❌ Submit Error:', error);
+      // Submit error
       
       const errorMessage = error instanceof Error ? error.message : String(error);
       
@@ -701,7 +763,7 @@ export default function CreateListingPage() {
       });
     } finally {
       setIsSubmitting(false);
-      console.log('✓ Submission process completed');
+      // Submission process completed
     }
   };
 
@@ -813,38 +875,6 @@ export default function CreateListingPage() {
                   }
                 />
               </div>
-
-              <div className={styles.inputField}>
-                <label className={styles.label}>ISBN-13</label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  placeholder="如: 978-957-0827-044"
-                  value={formState.book.isbn13 || ''}
-                  onChange={(e) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      book: { ...prev.book, isbn13: e.target.value },
-                    }))
-                  }
-                />
-              </div>
-
-              <div className={styles.inputField}>
-                <label className={styles.label}>ISBN-10</label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  placeholder="如: 957-0827-044"
-                  value={formState.book.isbn10 || ''}
-                  onChange={(e) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      book: { ...prev.book, isbn10: e.target.value },
-                    }))
-                  }
-                />
-              </div>
             </div>
           </section>
 
@@ -865,12 +895,19 @@ export default function CreateListingPage() {
                   min="1"
                   step="10"
                   value={formState.usedPrice}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setFormState((prev) => ({
                       ...prev,
                       usedPrice: e.target.value,
-                    }))
-                  }
+                    }));
+                  }}
+                  onInput={(e) => {
+                    // 確保立即更新，處理某些瀏覽器延遲問題
+                    setFormState((prev) => ({
+                      ...prev,
+                      usedPrice: (e.target as HTMLInputElement).value,
+                    }));
+                  }}
                 />
               </div>
 
@@ -905,12 +942,19 @@ export default function CreateListingPage() {
                   min="2000"
                   max={new Date().getFullYear()}
                   value={formState.originAcademicYear}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setFormState((prev) => ({
                       ...prev,
                       originAcademicYear: e.target.value,
-                    }))
-                  }
+                    }));
+                  }}
+                  onInput={(e) => {
+                    // 確保立即更新，處理某些瀏覽器延遲問題
+                    setFormState((prev) => ({
+                      ...prev,
+                      originAcademicYear: (e.target as HTMLInputElement).value,
+                    }));
+                  }}
                 />
               </div>
 
@@ -929,6 +973,21 @@ export default function CreateListingPage() {
                   <option value="1">第一學期</option>
                   <option value="2">第二學期</option>
                 </select>
+              </div>
+
+              {/* 適用年級說明 */}
+              <div className={styles.infoBanner} style={{ 
+                backgroundColor: '#fef5e7', 
+                border: '1px solid #f8d7a1',
+                borderRadius: '4px',
+                padding: '12px',
+                marginBottom: '20px',
+                fontSize: '0.9rem',
+                color: '#856404'
+              }}>
+                <i className="fas fa-info-circle" style={{ marginRight: '8px', color: '#d39e00' }}></i>
+                <strong>適用年級說明：</strong>  
+                目前選項表示這本書最適合哪個年級的學生使用。系統已根據您的個人資料自動預填。
               </div>
 
               <div className={styles.inputField}>
@@ -952,6 +1011,9 @@ export default function CreateListingPage() {
                     </option>
                   ))}
                 </select>
+                <div className={styles.helperText}>
+                  選擇這本書最適合的校區位置
+                </div>
               </div>
 
               <div className={styles.inputField}>
@@ -976,6 +1038,9 @@ export default function CreateListingPage() {
                     </option>
                   ))}
                 </select>
+                <div className={styles.helperText}>
+                  例如：日間部、進修部
+                </div>
               </div>
 
               <div className={styles.inputField}>
@@ -1004,10 +1069,13 @@ export default function CreateListingPage() {
                     </option>
                   ))}
                 </select>
+                <div className={styles.helperText}>
+                  選擇科系幫助買家了解這本書的適用範圍
+                </div>
               </div>
 
               <div className={styles.inputField}>
-                <label className={`${styles.label} ${styles.labelRequired}`}>班級</label>
+                <label className={`${styles.label} ${styles.labelRequired}`}>年級</label>
                 <select
                   className={styles.select}
                   value={formState.classGroupId}

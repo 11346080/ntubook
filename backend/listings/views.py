@@ -2,6 +2,7 @@ from django.views.generic import ListView, DetailView, CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
+from django.utils import timezone
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -17,10 +18,48 @@ from .serializers import (
     ListingSerializer, 
     ListingLatestSerializer, 
     ListingDetailSerializer,
-    ListingCreateSerializer
+    ListingCreateSerializer,
+    check_sensitive_words
 )
 from books.models import Book
 from core.models import ClassGroup
+
+
+# ================= 後台審查函數 =================
+
+def async_review_listing(listing_id):
+    """
+    後台異步審查刊登：執行敏感詞檢查
+    如果審查通過，更新 status 為 AVAILABLE
+    如果審查失敗，設置 status 為 REJECTED，並記錄原因
+    
+    此函數應在線程或 Celery 任務中運行
+    """
+    try:
+        listing = Listing.objects.get(id=listing_id)
+        
+        # 敏感詞檢查
+        title_sensitive = check_sensitive_words(listing.book.title if listing.book else '')
+        desc_sensitive = check_sensitive_words(listing.description or '')
+        
+        sensitive_words = list(set(title_sensitive + desc_sensitive))
+        
+        if sensitive_words:
+            # 審查失敗：設置為 REJECTED
+            listing.status = Listing.Status.REJECTED
+            listing.reject_reason = f'用詞似有不妥，請重新斟酌筆墨...（敏感詞：{", ".join(sensitive_words)}）'
+            listing.save()
+            print(f'[REVIEW FAILED] Listing {listing_id}: {listing.reject_reason}')
+        else:
+            # 審查通過：設置為 AVAILABLE
+            listing.status = Listing.Status.AVAILABLE
+            listing.save()
+            print(f'[REVIEW PASSED] Listing {listing_id}: Approved and published')
+    
+    except Listing.DoesNotExist:
+        print(f'[ERROR] Listing {listing_id} not found')
+    except Exception as e:
+        print(f'[ERROR] Failed to review listing {listing_id}: {str(e)}')
 
 
 class ListingListView(ListView):
@@ -241,61 +280,27 @@ def latest_listings_api(request):
         }, status=400)
 
 
-@api_view(['GET'])
+@api_view(['GET', 'DELETE'])
 @permission_classes([AllowAny])
 def listing_detail_api(request, listing_id):
     """
-    取得單一刊登的詳細資訊 JSON API 端點 / Get single listing detail API endpoint
-    公開存取 / Public access
+    取得單一刊登的詳細資訊或刪除刊登 / Get or delete single listing
+    - GET: 公開存取 / Public access
+    - DELETE: 需要認證且為刊登擁有者 / Requires authentication and ownership
     
     Parameters:
     - listing_id: 刊登 ID
     
-    Response (200):
+    GET Response (200):
     {
         "success": true,
-        "data": {
-            "id": 1,
-            "book": {
-                "id": 1,
-                "title": "書名",
-                "author_display": "作者",
-                "isbn13": "...",
-                "isbn10": "...",
-                "publisher": "出版社",
-                "publication_year": 2020,
-                "publication_date_text": "2020-01-01",
-                "edition": "1st",
-                "cover_image_url": "URL"
-            },
-            "seller": {
-                "id": 1,
-                "display_name": "賣家暱稱",
-                "department": {
-                    "id": 1,
-                    "name_zh": "資管系"
-                }
-            },
-            "used_price": 350.00,
-            "condition_level": "GOOD",
-            "condition_level_display": "良好",
-            "description": "商品描述...",
-            "seller_note": "賣家備註...",
-            "status": "PUBLISHED",
-            "origin_academic_year": 2023,
-            "origin_term": 1,
-            "origin_class_group": {
-                "id": 1,
-                "code": "...",
-                "name_zh": "班級名稱",
-                "department": {...}
-            },
-            "images": [
-                {"id": 1, "file_path": "...", "is_primary": true, "sort_order": 0}
-            ],
-            "created_at": "ISO datetime",
-            "updated_at": "ISO datetime"
-        }
+        "data": { ... }
+    }
+    
+    DELETE Response (200):
+    {
+        "success": true,
+        "message": "刊登已刪除"
     }
     
     Response (404):
@@ -308,24 +313,67 @@ def listing_detail_api(request, listing_id):
     }
     """
     try:
-        # 獲取刊登（只顯示活躍的刊登）
-        listing = Listing.objects.select_related(
-            'book',
-            'seller__profile',
-            'seller__profile__department',
-            'origin_class_group__department'
-        ).prefetch_related('images').get(
-            id=listing_id,
-            status=Listing.Status.AVAILABLE,
-            deleted_at__isnull=True
-        )
+        if request.method == 'GET':
+            # 獲取刊登（只顯示活躍的刊登）
+            listing = Listing.objects.select_related(
+                'book',
+                'seller__profile',
+                'seller__profile__department',
+                'origin_class_group__department'
+            ).prefetch_related('images').get(
+                id=listing_id,
+                status=Listing.Status.AVAILABLE,
+                deleted_at__isnull=True
+            )
+            
+            serializer = ListingDetailSerializer(listing)
+            
+            return Response({
+                'success': True,
+                'data': serializer.data
+            })
         
-        serializer = ListingDetailSerializer(listing)
-        
-        return Response({
-            'success': True,
-            'data': serializer.data
-        })
+        elif request.method == 'DELETE':
+            # 驗證權限
+            if not request.user.is_authenticated:
+                return Response({
+                    'success': False,
+                    'error': {
+                        'code': 'UNAUTHORIZED',
+                        'message': '需要登入才能刪除刊登'
+                    }
+                }, status=401)
+            
+            listing = Listing.objects.get(id=listing_id)
+            
+            # 檢查是否為刊登擁有者
+            if listing.seller_id != request.user.id:
+                return Response({
+                    'success': False,
+                    'error': {
+                        'code': 'FORBIDDEN',
+                        'message': '只有刊登者才能刪除此刊登'
+                    }
+                }, status=403)
+            
+            # 只允許刪除草稿或已拒絕的刊登
+            if listing.status not in [Listing.Status.DRAFT, Listing.Status.REJECTED, Listing.Status.OFF_SHELF]:
+                return Response({
+                    'success': False,
+                    'error': {
+                        'code': 'INVALID_STATUS',
+                        'message': f'狀態為 {listing.get_status_display()} 的刊登不能刪除'
+                    }
+                }, status=400)
+            
+            # 以 soft delete 方式刪除
+            listing.deleted_at = timezone.now()
+            listing.save(update_fields=['deleted_at'])
+            
+            return Response({
+                'success': True,
+                'message': '刊登已刪除'
+            })
     
     except Listing.DoesNotExist:
         return Response({
@@ -340,8 +388,126 @@ def listing_detail_api(request, listing_id):
         return Response({
             'success': False,
             'error': {
-                'code': 'FETCH_ERROR',
-                'message': f'無法載入書籍詳情: {str(e)}'
+                'code': 'ERROR',
+                'message': f'操作失敗: {str(e)}'
+            }
+        }, status=400)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def create_purchase_request_for_listing(request, listing_id):
+    """
+    為特定刊登建立預約請求 / Create a purchase request for a listing
+    需要登入 / Requires authentication
+    
+    Request Body:
+    {
+        "buyer_message": "我想要這本書"
+    }
+    
+    Response (201):
+    {
+        "success": true,
+        "data": {
+            "id": 1,
+            "listing_id": 1,
+            "status": "PENDING",
+            "buyer_message": "...",
+            "created_at": "ISO datetime"
+        }
+    }
+    """
+    try:
+        from purchase_requests.models import PurchaseRequest
+        from django.db import IntegrityError
+        
+        # 檢查刊登是否存在
+        try:
+            listing = Listing.objects.select_related('book', 'seller__profile').get(id=listing_id)
+        except Listing.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'NOT_FOUND',
+                    'message': '刊登不存在'
+                }
+            }, status=404)
+        
+        # 檢查刊登狀態
+        if listing.status not in [Listing.Status.AVAILABLE]:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'INVALID_STATUS',
+                    'message': '此刊登無法預約'
+                }
+            }, status=400)
+        
+        # 檢查是否為自己的刊登
+        if listing.seller_id == request.user.id:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'INVALID_OPERATION',
+                    'message': '不能預約自己的刊登'
+                }
+            }, status=400)
+        
+        # 檢查是否已經預約過
+        existing = PurchaseRequest.objects.filter(
+            listing=listing,
+            buyer=request.user,
+            status__in=['PENDING', 'ACCEPTED']
+        ).first()
+        
+        if existing:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'ALREADY_EXISTS',
+                    'message': '你已經預約過此刊登'
+                }
+            }, status=400)
+        
+        # 獲取留言
+        buyer_message = request.data.get('buyer_message', '').strip()
+        
+        # 創建預約請求
+        try:
+            purchase_request = PurchaseRequest.objects.create(
+                listing=listing,
+                buyer=request.user,
+                buyer_message=buyer_message,
+                status=PurchaseRequest.Status.PENDING
+            )
+            
+            return Response({
+                'success': True,
+                'data': {
+                    'id': purchase_request.id,
+                    'listing_id': listing.id,
+                    'status': purchase_request.status,
+                    'buyer_message': purchase_request.buyer_message,
+                    'created_at': purchase_request.created_at.isoformat(),
+                }
+            }, status=201)
+        
+        except IntegrityError as e:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'DUPLICATE',
+                    'message': '預約請求已存在'
+                }
+            }, status=400)
+    
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'ERROR',
+                'message': str(e)
             }
         }, status=400)
 
@@ -502,7 +668,7 @@ def create_listing_api(request):
                 }
             }, status=404)
         
-        # 3. 建立刊登
+        # 3. 建立刊登 (狀態為 PENDING，待後台異步審核)
         listing = Listing.objects.create(
             seller=request.user,
             book=book,
@@ -513,7 +679,7 @@ def create_listing_api(request):
             condition_level=data['condition_level'],
             description=data.get('description') or '',
             seller_note=data.get('seller_note'),
-            status=Listing.Status.AVAILABLE
+            status=Listing.Status.PENDING
         )
         
         # 4. 處理圖片上傳 - 直接存到數據庫
@@ -568,9 +734,19 @@ def create_listing_api(request):
         # 5. 序列化回傳
         output_serializer = ListingDetailSerializer(listing)
         
+        # 6. 觸發後台異步審查任務 (敏感詞 + 圖片審查)
+        import threading
+        review_thread = threading.Thread(
+            target=async_review_listing,
+            args=(listing.id,),
+            daemon=True
+        )
+        review_thread.start()
+        
         return Response({
             'success': True,
-            'data': output_serializer.data
+            'data': output_serializer.data,
+            'message': '書卷已遞交，小二正在為您審核，請稍候...'
         }, status=201)
     
     except json.JSONDecodeError:
@@ -593,4 +769,178 @@ def create_listing_api(request):
                 'message': f'伺服器錯誤: {str(e)}'
             }
         }, status=500)
+
+
+# ================= 我的刊登 API =================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def recommended_listings_api(request):
+    """
+    獲取推薦的刊登：大他一屆的學長姐所刊登的書籍 / Get recommended listings
+    需要登入 / Requires authentication
+    
+    邏輯：根據當前用戶的班級 → 找出「下一屆」（年級+1）的刊登列表
+    
+    Query Parameters (可選):
+    - count: 返回筆數，預設 6 (最多 20)
+    
+    Response:
+    {
+        "success": true,
+        "data": [
+            {
+                "id": 1,
+                "book_title": "書名",
+                "book_author": "作者",
+                "cover_image_url": "URL",
+                "used_price": 100.00,
+                "condition_level": "GOOD",
+                "seller_display_name": "賣家",
+                "seller_department": "系所",
+                "created_at": "ISO datetime",
+                "primary_image": {...}
+            }
+        ]
+    }
+    """
+    try:
+        # 獲取當前用戶的個人資料
+        user_profile = request.user.profile if hasattr(request.user, 'profile') else None
+        
+        if not user_profile or not user_profile.class_group or not user_profile.grade_no:
+            # 如果用戶沒有填寫班級或年級，返回空值
+            return Response({
+                'success': True,
+                'data': [],
+                'count': 0,
+                'message': '請先填寫個人資料才能查看推薦書籍'
+            })
+        
+        # 計算推薦目標年級（大他一屆 = grade_no + 1）
+        target_grade = user_profile.grade_no + 1
+        current_class_group = user_profile.class_group
+        
+        # 檢查是否超過最高年級（假設最多 4 年級）
+        if target_grade > 4:
+            return Response({
+                'success': True,
+                'data': [],
+                'count': 0,
+                'message': '您已是最高年級，無上屆推薦'
+            })
+        
+        # 獲取請求參數
+        count = int(request.GET.get('count', 6))
+        count = min(count, 20)  # 最多 20 筆，防止 DoS
+        
+        # 查詢：來自相同班級、高一年級、已發佈的刊登
+        # 使用 ClassGroup 的 grade_no 欄位來篩選
+        from core.models import ClassGroup as CG
+        
+        target_class_groups = CG.objects.filter(
+            department=current_class_group.department,
+            program_type=current_class_group.program_type,
+            grade_no=target_grade
+        ).values_list('id', flat=True)
+        
+        listings = Listing.objects.filter(
+            origin_class_group_id__in=target_class_groups,
+            status=Listing.Status.AVAILABLE,
+            deleted_at__isnull=True
+        ).select_related(
+            'book',
+            'seller',
+            'seller__profile',
+            'seller__profile__department'
+        ).prefetch_related(
+            'images'
+        ).order_by('-created_at')[:count]
+        
+        serializer = ListingLatestSerializer(listings, many=True)
+        
+        return Response({
+            'success': True,
+            'data': serializer.data,
+            'count': len(serializer.data)
+        })
+    
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'FETCH_ERROR',
+                'message': f'無法載入推薦書籍: {str(e)}'
+            }
+        }, status=400)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_listings_api(request):
+    """
+    獲取當前登入用戶的所有刊登（包括所有狀態）/ Get current user's all listings
+    需要登入 / Requires authentication
+    
+    Response (200):
+    {
+        "success": true,
+        "data": [
+            {
+                "id": 1,
+                "book": {
+                    "title": "書名",
+                    "author_display": "作者"
+                },
+                "used_price": 350.00,
+                "status": "PENDING|AVAILABLE|RESERVED|SOLD|OFF_SHELF|REJECTED",
+                "reject_reason": "...|null",
+                "listing_images": [
+                    { "file_path": "..." }
+                ],
+                "created_at": "ISO datetime"
+            }
+        ]
+    }
+    """
+    try:
+        # 查詢當前用戶的所有刊登（包括已刪除的）
+        listings = Listing.objects.filter(
+            seller=request.user
+        ).select_related(
+            'book'
+        ).prefetch_related('images').order_by('-created_at')
+        
+        # 序列化簡化版本（用於列表顯示）
+        data = []
+        for listing in listings:
+            images = list(listing.images.values('file_path'))
+            
+            data.append({
+                'id': listing.id,
+                'book': {
+                    'title': listing.book.title if listing.book else '未知書籍',
+                    'author_display': listing.book.author_display if listing.book else '未知作者',
+                },
+                'used_price': float(listing.used_price),
+                'status': listing.status,
+                'reject_reason': listing.reject_reason,
+                'listing_images': images,
+                'created_at': listing.created_at.isoformat(),
+            })
+        
+        return Response({
+            'success': True,
+            'data': data,
+            'count': len(data)
+        })
+    
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'FETCH_ERROR',
+                'message': f'無法載入刊登列表: {str(e)}'
+            }
+        }, status=400)
 

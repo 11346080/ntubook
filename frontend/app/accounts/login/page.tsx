@@ -41,14 +41,13 @@ export default function LoginPage() {
       // localStorage.setItem('token', data.token);
       // window.location.href = '/dashboard';
 
-      console.log('登入嘗試:', loginData);
       // 模擬成功登入
       setTimeout(() => {
         alert('登入成功！(模擬)');
         setLoading(false);
       }, 1000);
     } catch (err) {
-      console.error('登入出错:', err);
+      // Login error
       setError('登入失敗，請檢查帳號密碼');
       setLoading(false);
     }
@@ -56,7 +55,6 @@ export default function LoginPage() {
 
   const handleGoogleLogin = () => {
     // TODO: 實作 Google OAuth 登入
-    console.log('Google 登入流程啟動');
   };
 
   return (

@@ -48,11 +48,15 @@ export default function NotificationsPage() {
     const fetchNotifications = async () => {
       try {
         const baseUrl = window.__BASEURL__ || 'http://localhost:8000';
-        const response = await fetch(`${baseUrl}/api/notifications/list/`);
+        const response = await fetch(`${baseUrl}/api/notifications/list/`, {
+          method: 'GET',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+        });
         const data = await response.json();
         setNotifications(data);
       } catch (err) {
-        console.error('Failed to fetch notifications:', err);
+        // Error fetching notifications
       } finally {
         setLoading(false);
       }

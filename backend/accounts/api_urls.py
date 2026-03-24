@@ -10,6 +10,16 @@ from .models import User
 from django.conf import settings
 import secrets
 
+# ============================================================================
+# 嘗試導入新的 API v2 視圖 (如果存在)
+# Try to import new API v2 views (if available)
+# ============================================================================
+try:
+    from .api_views import me_api as me_api_v2, user_profile_api, create_profile_api
+    HAS_API_V2 = True
+except ImportError:
+    HAS_API_V2 = False
+
 
 def _verify_bootstrap_secret(request) -> tuple[bool, str]:
     """Return (is_valid, error_message)."""
@@ -350,3 +360,11 @@ urlpatterns = [
     path('profile/', profile_create_or_update_api, name='api-profile'),
     path('profiles/', views.userprofile_list_api, name='api-userprofile-list'),
 ]
+
+# 如果 API v2 可用，添加 v2 路由
+if HAS_API_V2:
+    urlpatterns += [
+        path('v2/me/', me_api_v2, name='api-me-v2'),
+        path('v2/profile/', user_profile_api, name='api-profile-v2'),
+        path('v2/profile/create/', create_profile_api, name='api-profile-create-v2'),
+    ]
