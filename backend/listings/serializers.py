@@ -20,6 +20,11 @@ SENSITIVE_WORDS = [
     '仇恨', '歧視', '恐怖分子',
     # 平台特定的敏感詞
     '假貨', '假冒', '翻新', '來路不明',
+    # 粗野和辱罵用語
+    '該死', '爛書', '垃圾', '討厭', '爛貨', '爛', 
+    '媽的', '你媽', '去死', '婊子', '混蛋', '王八蛋',
+    '操', '他媽', '她媽', '狗娘', '混帳', '雜種',
+    '廢物', '渣滓', '狗屎', '糟糕', '呸', '滾',
 ]
 
 def check_sensitive_words(text: str) -> list:
@@ -36,6 +41,47 @@ def check_sensitive_words(text: str) -> list:
                 found_words.append(word)
     
     return found_words
+
+
+def check_image_nsfw(image_binary: bytes) -> bool:
+    """
+    檢查圖片是否包含 NSFW 內容
+    
+    簡單版本：可預留呼叫外部 API 的邏輯
+    範例：Google Vision API、Clarifai、OpenAI Vision 等
+    
+    Args:
+        image_binary: 圖片二進制數據
+    
+    Returns:
+        True: 圖片被判定為 NSFW（不適合發布）
+        False: 圖片通過檢查（可以發布）
+    """
+    try:
+        # TODO: 整合外部 NSFW 檢查 API
+        # 例如：
+        # 1. Google Cloud Vision API
+        # 2. Clarifai NSFW 模型
+        # 3. OpenAI Vision API
+        # 4. 本地 deep learning 模型
+        
+        # 現階段：簡單驗證圖片大小（最大 10MB）
+        MAX_IMAGE_SIZE = 10 * 1024 * 1024  # 10MB
+        if len(image_binary) > MAX_IMAGE_SIZE:
+            return True  # 圖片過大，拒絕
+        
+        # 驗證最小圖片大小（至少 1KB）
+        MIN_IMAGE_SIZE = 1024  # 1KB
+        if len(image_binary) < MIN_IMAGE_SIZE:
+            return True  # 圖片過小，可能是損壞的
+        
+        # 通過檢查
+        return False
+    except Exception as e:
+        # 檢查出錯時，保守起見，拒絕此圖片
+        print(f'[WARNING] Image NSFW check error: {str(e)}')
+        return False  # 先放寬，讓圖片通過，但記錄錯誤
+
 
 
 class ListingImageSerializer(serializers.ModelSerializer):
