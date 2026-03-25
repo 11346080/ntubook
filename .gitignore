@@ -64,7 +64,7 @@ env/
 *.env/
 bin/
 include/
-lib/
+/lib/
 share/
 
 # =========================
