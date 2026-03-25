@@ -20,6 +20,7 @@ from .serializers import (
     ListingLatestSerializer, 
     ListingDetailSerializer,
     ListingCreateSerializer,
+    ListingImageSerializer,
     check_sensitive_words,
     check_image_nsfw
 )
@@ -1035,8 +1036,14 @@ def my_listings_api(request):
         # 序列化簡化版本（用於列表顯示）
         data = []
         for listing in listings:
-            images = list(listing.images.values('file_path'))
-            
+            images = [
+                {
+                    **ListingImageSerializer(img).data,
+                    'file_path': f'/api/listings/{listing.id}/images/{img.id}/',
+                }
+                for img in listing.images.all()
+            ]
+
             data.append({
                 'id': listing.id,
                 'book': {
@@ -1047,9 +1054,8 @@ def my_listings_api(request):
                 'used_price': float(listing.used_price),
                 'condition_level': listing.condition_level,
                 'status': listing.status,
-                'status_display': status_display_map.get(listing.status, listing.status),
                 'reject_reason': listing.reject_reason,
-                'images': images,
+                'listing_images': images,
                 'created_at': listing.created_at.isoformat(),
             })
 

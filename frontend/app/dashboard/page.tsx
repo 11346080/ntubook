@@ -803,34 +803,29 @@ export default function DashboardPage() {
                   <div className={styles.cardContent}>
                     <h6 className={styles.cardTitle}>{listing.book.title}</h6>
                     <p className={styles.cardAuthor}>{listing.book.author_display}</p>
-
-                        <div className={styles.cardPrice}>NT$ {listing.used_price.toLocaleString()}</div>
-
-                        {listing.status === 'REJECTED' && listing.reject_reason && (
-                          <div className={styles.cardRejectionReason}>
-                            <strong>退回原因：</strong> {listing.reject_reason}
-                          </div>
-                        )}
-
-                        <div style={{ fontSize: '0.85rem', color: '#999', marginTop: 'auto', paddingTop: '1rem' }}>
-                          {new Date(listing.created_at).toLocaleDateString('zh-TW')}
-                        </div>
-
-                        {listing.status === 'REJECTED' && (
-                          <div className={styles.cardActions}>
-                            <button
-                              onClick={() => handleDeleteListing(listing.id)}
-                              className={`${styles.btnDelete} ${styles.btnSmall}`}
-                            >
-                              <i className="fas fa-trash"></i> 刪除
-                            </button>
-                          </div>
-                        )}
+                    <div className={styles.cardPrice}>NT$ {listing.used_price.toLocaleString()}</div>
+                    {listing.status === 'REJECTED' && listing.reject_reason && (
+                      <div className={styles.cardRejectionReason}>
+                        <strong>退回原因：</strong> {listing.reject_reason}
                       </div>
+                    )}
+                    <div style={{ fontSize: '0.85rem', color: '#999', marginTop: 'auto', paddingTop: '1rem' }}>
+                      {new Date(listing.created_at).toLocaleDateString('zh-TW')}
                     </div>
-                  ))}
-              </div>
-            </>
+                    {listing.status === 'REJECTED' && (
+                      <div className={styles.cardActions}>
+                        <button
+                          onClick={() => handleDeleteListing(listing.id)}
+                          className={`${styles.btnDelete} ${styles.btnSmall}`}
+                        >
+                          <i className="fas fa-trash"></i> 刪除
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
