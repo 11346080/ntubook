@@ -5,7 +5,8 @@
 
 import re
 import logging
-from typing import TypedDict, NotRequired
+from typing import TypedDict
+from typing_extensions import NotRequired
 
 import requests
 from django.conf import settings
