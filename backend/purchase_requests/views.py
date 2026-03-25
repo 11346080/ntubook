@@ -245,6 +245,90 @@ def my_requests_api(request):
         }, status=400)
 
 
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def cancel_purchase_request_api(request, request_id):
+    """
+    取消預約請求 / Cancel a purchase request
+    需要登入且為買家 / Requires authentication and must be the buyer
+    
+    URL: DELETE /api/requests/{request_id}/
+    
+    Response (200):
+    {
+        "success": true,
+        "message": "預約已取消"
+    }
+    
+    Response (403):
+    {
+        "success": false,
+        "error": {
+            "code": "FORBIDDEN",
+            "message": "只有預約人才能取消此預約"
+        }
+    }
+    
+    Response (400):
+    {
+        "success": false,
+        "error": {
+            "code": "INVALID_STATUS",
+            "message": "此預約無法取消（已接受、已拒絕或已取消）"
+        }
+    }
+    """
+    try:
+        purchase_request = PurchaseRequest.objects.get(id=request_id)
+        
+        # 驗證權限：只有預約人（買家）可以取消
+        if purchase_request.buyer_id != request.user.id:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'FORBIDDEN',
+                    'message': '只有預約人才能取消此預約'
+                }
+            }, status=403)
+        
+        # 驗證狀態：只有 PENDING 狀態的預約可以取消
+        if purchase_request.status != PurchaseRequest.Status.PENDING:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'INVALID_STATUS',
+                    'message': f'此預約（狀態：{purchase_request.get_status_display()}）無法取消'
+                }
+            }, status=400)
+        
+        # 執行取消
+        purchase_request.status = PurchaseRequest.Status.CANCELLED_BY_BUYER
+        purchase_request.save(update_fields=['status', 'updated_at'])
+        
+        return Response({
+            'success': True,
+            'message': '預約已取消'
+        })
+    
+    except PurchaseRequest.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'NOT_FOUND',
+                'message': '查無此預約'
+            }
+        }, status=404)
+    
+    except Exception as e:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'ERROR',
+                'message': f'操作失敗: {str(e)}'
+            }
+        }, status=400)
+
+
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_purchase_request_api(request, listing_id):
