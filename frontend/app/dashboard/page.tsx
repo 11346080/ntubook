@@ -41,6 +41,7 @@ interface Listing {
   reject_reason?: string;
   created_at: string;
   images?: Array<{ id: number; file_name: string; mime_type: string; is_primary: boolean; sort_order: number; file_path: string }>;
+  listing_images?: Array<{ id: number; file_name: string; mime_type: string; is_primary: boolean; sort_order: number; file_path: string }>;
 }
 
 interface Favorite {
@@ -99,9 +100,10 @@ interface Department {
 
 interface ClassGroup {
   id: number;
-  department: number;
   name_zh: string;
   grade_no: number;
+  program_type_id: number;
+  department_id: number;
 }
 
 interface ProgramType {
@@ -377,8 +379,8 @@ export default function DashboardPage() {
   // 注意：department 可能殘留舊值（學制改變但 department 未清空），需同步檢查 program_type_id
   const filteredClassGroups = form.department_id && form.program_type_id
     ? allClassGroups.filter(c => {
-        const progMatch = String(c.program_type) === form.program_type_id;
-        const deptMatch = String(c.department) === form.department_id;
+        const progMatch = String(c.program_type_id) === form.program_type_id;
+        const deptMatch = String(c.department_id) === form.department_id;
         // DB 中 grade_no 是 10/20/30，前端 form 是 1/2/3，需乘以 10 比對
         const gradeValue = form.grade_no ? parseInt(form.grade_no, 10) : null;
         const gradeMatch = gradeValue !== null ? c.grade_no === gradeValue * 10 : true;
