@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from '../style/dashboard.module.css';
 
@@ -53,6 +53,18 @@ interface Favorite {
   created_at: string;
 }
 
+interface FavoriteListItem {
+  id: number;
+  book_id: number;
+  book_title: string;
+  book_author: string;
+  cover_image_url?: string;
+  listing_id?: number;
+  used_price?: number;
+  listing_status?: string;
+  created_at: string;
+}
+
 interface Reservation {
   id: number;
   listing: {
@@ -86,12 +98,18 @@ interface ClassGroup {
   grade_no: number;
 }
 
+interface ProgramType {
+  id: number;
+  name_zh: string;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
 
   const [me, setMe] = useState<MeResponse | null>(null);
   const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [programTypes, setProgramTypes] = useState<ProgramType[]>([]);
   const [allClassGroups, setAllClassGroups] = useState<ClassGroup[]>([]);
   const [activeTab, setActiveTab] = useState<'profile' | 'listings' | 'favorites' | 'reservations'>('listings');
 
@@ -110,12 +128,13 @@ export default function DashboardPage() {
   
   // 刊登、收藏、預約相關狀態
   const [listings, setListings] = useState<Listing[]>([]);
-  const [favorites, setFavorites] = useState<Favorite[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteListItem[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [loadingListings, setLoadingListings] = useState(false);
   const [loadingFavorites, setLoadingFavorites] = useState(false);
   const [loadingReservations, setLoadingReservations] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [initialStatsLoaded, setInitialStatsLoaded] = useState(false);
   const loadedTabs = useRef<Set<string>>(new Set());
 
   // 加載用戶資料及刊登
@@ -138,28 +157,76 @@ export default function DashboardPage() {
           return;
         }
 
-        // 2. Load profile
-        fetch('http://localhost:3000/api/accounts/profile/')
-          .then(r => r.json())
-          .then(p => {
-            setProfile(p);
-            setForm({
-              display_name: p.display_name ?? '',
-              student_no: p.student_no ?? '',
-              program_type_id: String(p.program_type_id ?? ''),
-              department_id: String(p.department_id ?? ''),
-              class_group_id: String(p.class_group_id ?? ''),
-              grade_no: String(p.grade_no ?? ''),
-            });
-            setLoading(false);
+        // 2. Load profile + all stats in parallel
+        Promise.all([
+          fetch('http://localhost:3000/api/accounts/profile/').then(r => r.json()),
+          fetch('http://localhost:8000/api/listings/my-listings/', {
+            method: 'GET',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+          }).then(r => r.ok ? r.json() : { data: [], count: 0 }),
+          fetch('http://localhost:8000/api/books/favorites/', {
+            method: 'GET',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+          }).then(r => r.ok ? r.json() : { data: [], count: 0 }),
+          fetch('http://localhost:8000/api/requests/my-requests/', {
+            method: 'GET',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+          }).then(r => r.ok ? r.json() : { data: [], count: 0 }),
+        ]).then(([p, listingsResp, favoritesResp, reservationsResp]) => {
+          setProfile(p);
+          setForm({
+            display_name: p.display_name ?? '',
+            student_no: p.student_no ?? '',
+            program_type_id: String(p.program_type_id ?? ''),
+            department_id: String(p.department_id ?? ''),
+            class_group_id: String(p.class_group_id ?? ''),
+            grade_no: String(p.grade_no ?? ''),
           });
+
+          // Resolve listings from { success: true, data: [...] }
+          const listingsRaw = Array.isArray(listingsResp) ? listingsResp
+            : (listingsResp?.data || []);
+          setListings(Array.isArray(listingsRaw) ? listingsRaw : []);
+
+          // Resolve favorites — flatten nested book/listing from API response
+          const rawFav = favoritesResp?.data !== undefined
+            ? (Array.isArray(favoritesResp) ? favoritesResp : favoritesResp.data || [])
+            : Array.isArray(favoritesResp) ? favoritesResp : [];
+          const favFlat: FavoriteListItem[] = (Array.isArray(rawFav) ? rawFav : []).map((f: Favorite) => ({
+            id: f.id,
+            book_id: f.book?.id ?? 0,
+            book_title: f.book?.title ?? '',
+            book_author: f.book?.author_display ?? '',
+            cover_image_url: f.book?.cover_image_url,
+            listing_id: f.listing?.id,
+            used_price: f.listing?.used_price,
+            listing_status: f.listing?.status,
+            created_at: f.created_at,
+          }));
+          setFavorites(favFlat);
+
+          // Resolve reservations
+          const resvData = reservationsResp?.data !== undefined
+            ? (Array.isArray(reservationsResp) ? reservationsResp : reservationsResp.data || [])
+            : Array.isArray(reservationsResp) ? reservationsResp
+            : [];
+          setReservations(Array.isArray(resvData) ? resvData : []);
+
+          setInitialStatsLoaded(true);
+          setLoading(false);
+        });
       });
 
     // 3. Load reference data
     Promise.all([
+      fetch('http://localhost:8000/api/core/program-types/').then(r => r.json()),
       fetch('http://localhost:8000/api/core/departments/').then(r => r.json()),
       fetch('http://localhost:8000/api/core/class-groups/').then(r => r.json()),
-    ]).then(([dept, cg]) => {
+    ]).then(([pt, dept, cg]) => {
+      setProgramTypes(pt);
       setDepartments(dept);
       setAllClassGroups(cg);
     });
@@ -189,22 +256,24 @@ export default function DashboardPage() {
   };
 
   // 取消收藏
-  const handleRemoveFavorite = async (bookId: number) => {
+  const handleRemoveFavorite = async (favoriteId: number, bookId: number) => {
     try {
       const response = await fetch(`http://localhost:8000/api/books/${bookId}/favorite/`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
-        setFavorites(favorites.filter(f => f.book.id !== bookId));
+        setFavorites(favorites.filter(f => f.id !== favoriteId));
       }
     } catch {
       // Remove favorite operation failed
     }
   };
 
-  // 當頁簽切換時加載相應數據
+  // 當頁簽切換時加載相應數據（不在初始 mount 時執行，初始數據由第一個 useEffect 的 Promise.all 先行載入）
   useEffect(() => {
+    if (!initialStatsLoaded) return;
+
     const loadTabData = async () => {
       if (activeTab === 'listings' && !loadedTabs.current.has('listings')) {
         loadedTabs.current.add('listings');
@@ -217,7 +286,7 @@ export default function DashboardPage() {
           });
           if (response.ok) {
             const data = await response.json();
-            setListings(Array.isArray(data) ? data : data.results || data.data || []);
+            setListings(Array.isArray(data) ? data : data.results || data.data || data.listings || []);
           } else if (response.status === 401) {
             router.push('/login');
           }
@@ -236,7 +305,20 @@ export default function DashboardPage() {
           });
           if (response.ok) {
             const data = await response.json();
-            setFavorites(Array.isArray(data) ? data : data.results || data.data || []);
+            // Flatten favorites: { data: [{ book: {...}, listing: {...}, ... }] }
+            const rawFav = data?.data !== undefined ? (Array.isArray(data) ? data : data.data || []) : Array.isArray(data) ? data : [];
+            const favFlat: FavoriteListItem[] = (Array.isArray(rawFav) ? rawFav : []).map((f: Favorite) => ({
+              id: f.id,
+              book_id: f.book?.id ?? 0,
+              book_title: f.book?.title ?? '',
+              book_author: f.book?.author_display ?? '',
+              cover_image_url: f.book?.cover_image_url,
+              listing_id: f.listing?.id,
+              used_price: f.listing?.used_price,
+              listing_status: f.listing?.status,
+              created_at: f.created_at,
+            }));
+            setFavorites(favFlat);
           }
         } catch {
           // 載入失敗
@@ -282,16 +364,33 @@ export default function DashboardPage() {
     };
 
     loadTabData();
-  }, [activeTab, router]);
+  }, [activeTab, initialStatsLoaded, router]);
 
   // 根據系別ID篩選班級
   const filteredClassGroups = form.department_id
     ? allClassGroups.filter(c => String(c.department) === form.department_id)
     : allClassGroups;
 
+  // 根據學制篩選系所（當學制改變時，清空已選的系所和班級）
+  const filteredDepartments = form.program_type_id
+    ? departments.filter(d => String(d.program_type) === form.program_type_id)
+    : departments;
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setForm(f => ({ ...f, [name]: value }));
+    setForm(f => {
+      const next = { ...f, [name]: value };
+      // When program_type changes, reset department and class_group
+      if (name === 'program_type_id') {
+        next.department_id = '';
+        next.class_group_id = '';
+      }
+      // When department changes, reset class_group
+      if (name === 'department_id') {
+        next.class_group_id = '';
+      }
+      return next;
+    });
     if (errors[name]) {
       setErrors(err => { const n = { ...err }; delete n[name]; return n; });
     }
@@ -500,12 +599,12 @@ export default function DashboardPage() {
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', color: '#1e140a', fontWeight: '600' }}>
-                  系所
+                  學制
                 </label>
-                <input
-                  type="text"
-                  value={selectedDept?.name_zh ?? '未填寫'}
-                  disabled
+                <select
+                  name="program_type_id"
+                  value={form.program_type_id}
+                  onChange={handleChange}
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -513,19 +612,50 @@ export default function DashboardPage() {
                     borderRadius: '6px',
                     fontSize: '1rem',
                     fontFamily: 'inherit',
-                    backgroundColor: '#f5edd8',
-                    color: '#999',
+                    backgroundColor: '#fff',
                   }}
-                />
+                >
+                  <option value="">請選擇學制</option>
+                  {programTypes.map(pt => (
+                    <option key={pt.id} value={pt.id}>{pt.name_zh}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#1e140a', fontWeight: '600' }}>
+                  系所
+                </label>
+                <select
+                  name="department_id"
+                  value={form.department_id}
+                  onChange={handleChange}
+                  disabled={!form.program_type_id}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #e0d8c8',
+                    borderRadius: '6px',
+                    fontSize: '1rem',
+                    fontFamily: 'inherit',
+                    backgroundColor: form.program_type_id ? '#fff' : '#f5edd8',
+                    color: form.program_type_id ? '#1e140a' : '#999',
+                  }}
+                >
+                  <option value="">請選擇系所</option>
+                  {filteredDepartments.map(d => (
+                    <option key={d.id} value={d.id}>{d.name_zh}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', color: '#1e140a', fontWeight: '600' }}>
                   班級
                 </label>
-                <input
-                  type="text"
-                  value={selectedClass?.name_zh ?? '未填寫'}
-                  disabled
+                <select
+                  name="class_group_id"
+                  value={form.class_group_id}
+                  onChange={handleChange}
+                  disabled={!form.department_id}
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -533,19 +663,24 @@ export default function DashboardPage() {
                     borderRadius: '6px',
                     fontSize: '1rem',
                     fontFamily: 'inherit',
-                    backgroundColor: '#f5edd8',
-                    color: '#999',
+                    backgroundColor: form.department_id ? '#fff' : '#f5edd8',
+                    color: form.department_id ? '#1e140a' : '#999',
                   }}
-                />
+                >
+                  <option value="">請選擇班級</option>
+                  {filteredClassGroups.map(cg => (
+                    <option key={cg.id} value={cg.id}>{cg.name_zh}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', color: '#1e140a', fontWeight: '600' }}>
                   年級
                 </label>
-                <input
-                  type="text"
-                  value={profile?.grade_no ? `${profile.grade_no}年級` : '未填寫'}
-                  disabled
+                <select
+                  name="grade_no"
+                  value={form.grade_no}
+                  onChange={handleChange}
                   style={{
                     width: '100%',
                     padding: '0.75rem',
@@ -553,10 +688,16 @@ export default function DashboardPage() {
                     borderRadius: '6px',
                     fontSize: '1rem',
                     fontFamily: 'inherit',
-                    backgroundColor: '#f5edd8',
-                    color: '#999',
+                    backgroundColor: '#fff',
                   }}
-                />
+                >
+                  <option value="">請選擇年級</option>
+                  <option value="1">一年級</option>
+                  <option value="2">二年級</option>
+                  <option value="3">三年級</option>
+                  <option value="4">四年級</option>
+                  <option value="5">五年級</option>
+                </select>
               </div>
             </div>
 
@@ -676,46 +817,53 @@ export default function DashboardPage() {
               <div className={styles.emptyStateSubText}>瀏覽喜愛的書籍，點擊心形按鈕即可收藏</div>
             </div>
           ) : (
-            <div className={styles.cardGrid}>
-              {favorites.map(favorite => (
-                <div key={favorite.id} className={styles.card}>
-                  <div className={styles.cardImage} onClick={() => favorite.listing && router.push(`/listings/${favorite.listing.id}`)} style={{ cursor: favorite.listing ? 'pointer' : 'default' }}>
-                    {favorite.book.cover_image_url ? (
-                      <img
-                        src={favorite.book.cover_image_url}
-                        alt={favorite.book.title}
-                        onError={e => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <div className={styles.cardImagePlaceholder}>
-                        <i className="fas fa-book"></i>
-                      </div>
-                    )}
-                    {favorite.listing && getStatusBadge(favorite.listing.status)}
-                  </div>
-                  <div className={styles.cardContent}>
-                    <h6 className={styles.cardTitle} onClick={() => favorite.listing && router.push(`/listings/${favorite.listing.id}`)} style={{ cursor: favorite.listing ? 'pointer' : 'default', color: favorite.listing ? '#9b2335' : 'inherit' }}>{favorite.book.title}</h6>
-                    <p className={styles.cardAuthor}>{favorite.book.author_display}</p>
-
-                    {favorite.listing && <div className={styles.cardPrice}>NT$ {favorite.listing.used_price.toLocaleString()}</div>}
-
-                    <div style={{ fontSize: '0.85rem', color: '#999', marginTop: 'auto', paddingTop: '1rem' }}>
-                      已收藏
-                    </div>
-
-                    <div className={styles.cardActions}>
-                      <button
-                        onClick={() => handleRemoveFavorite(favorite.book.id)}
-                        className={`${styles.btnOutline} ${styles.btnSmall}`}
-                      >
-                        <i className="fas fa-trash"></i> 移除
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div style={{ overflowX: 'auto' }}>
+              <table className={styles.reservationTable}>
+                <thead>
+                  <tr>
+                    <th>書籍名稱</th>
+                    <th>價格</th>
+                    <th>刊登狀態</th>
+                    <th>收藏時間</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {favorites.map(favorite => (
+                    <tr key={favorite.id}>
+                      <td>
+                        <strong style={{ color: '#9b2335' }}>{favorite.book_title}</strong>
+                        {favorite.book_author && (
+                          <div style={{ fontSize: '0.8rem', color: '#6c757d', marginTop: '2px' }}>
+                            {favorite.book_author}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        {favorite.used_price !== undefined
+                          ? `NT$ ${favorite.used_price.toLocaleString()}`
+                          : '—'}
+                      </td>
+                      <td>
+                        {favorite.listing_status
+                          ? getStatusBadge(favorite.listing_status)
+                          : <span style={{ color: '#999', fontSize: '0.85rem' }}>無刊登</span>}
+                      </td>
+                      <td style={{ color: '#6c757d', fontSize: '0.85rem' }}>
+                        {new Date(favorite.created_at).toLocaleDateString('zh-TW')}
+                      </td>
+                      <td>
+                        <button
+                          onClick={() => handleRemoveFavorite(favorite.id, favorite.book_id)}
+                          className={`${styles.btnOutline} ${styles.btnSmall}`}
+                        >
+                          <i className="fas fa-trash"></i> 移除
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>

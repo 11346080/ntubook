@@ -3,17 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
-const FROZEN_PROGRAM_TYPE_CODES = new Set(['3', '4', '7']);
-
-const DEPT_CODE_RULES: Array<{
-  program_type_code: string;
-  regex: RegExp;
-}> = [
-  { program_type_code: '4', regex: /^\d{3}(4[1-7A-C])\d{3}$/ },
-  { program_type_code: '3', regex: /^\d{3}(3[1-7A-B])\d{3}$/ },
-  { program_type_code: '7', regex: /^\d{3}(5[1-7])\d{3}$/ },
-];
-
 interface ProgramType {
   id: number;
   code: string;
@@ -55,52 +44,6 @@ interface FormState {
   grade_no: string;
 }
 
-function parseStudentNo(raw: string): { program_type_code: string; dept_code: string; entry_year: string } | null {
-  const trimmed = raw.trim();
-  for (const rule of DEPT_CODE_RULES) {
-    const m = rule.regex.exec(trimmed);
-    if (m) {
-      return {
-        program_type_code: rule.program_type_code,
-        dept_code: m[1],
-        entry_year: trimmed.slice(0, 3),
-      };
-    }
-  }
-  return null;
-}
-
-const DEPT_CODE_TO_DB_CODE: Record<string, string> = {
-  '31': '301', '32': '302', '33': '303', '34': '304',
-  '35': '305', '36': '306', '37': '307', '3A': '30A', '3B': '30B',
-  '41': '401', '42': '402', '43': '403', '44': '404',
-  '45': '405', '46': '406', '47': '407', '4A': '40A', '4B': '40B', '4C': '40C',
-  '51': '521', '52': '508', '53': '503', '54': '504',
-  '55': '505', '56': '506', '57': '509',
-};
-
-function resolveDepartmentId(departments: Department[], dept_code: string): number | null {
-  const dbCode = DEPT_CODE_TO_DB_CODE[dept_code];
-  if (!dbCode) return null;
-  const found = departments.find(d => d.code === dbCode);
-  return found ? found.id : null;
-}
-
-function candidateStudentNo(email: string | null): string {
-  if (!email) return '';
-  const local = email.split('@')[0].toLowerCase();
-  if (email.endsWith('@ntub.edu.tw') && /^\d{8}$/.test(local)) {
-    return local;
-  }
-  return '';
-}
-
-function toDbGradeNo(displayGrade: string): number | null {
-  const n = parseInt(displayGrade, 10);
-  if (isNaN(n) || n < 1 || n > 5) return null;
-  return n * 10;
-}
-
 export default function FirstLoginPage() {
   const router = useRouter();
 
@@ -110,7 +53,6 @@ export default function FirstLoginPage() {
 
   const [filteredDepartments, setFilteredDepartments] = useState<Department[]>([]);
   const [filteredClassGroups, setFilteredClassGroups] = useState<ClassGroup[]>([]);
-  const [userTouched, setUserTouched] = useState<Record<string, boolean>>({});
 
   const [form, setForm] = useState<FormState>({
     display_name: '',
@@ -126,8 +68,6 @@ export default function FirstLoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState('');
-
-  const initDone = useRef(false);
 
   const loadReferenceData = useCallback(async () => {
     const [ptRes, deptRes, cgRes] = await Promise.all([
@@ -147,61 +87,28 @@ export default function FirstLoginPage() {
     return res.json() as Promise<Profile>;
   }, []);
 
-  const loadEmail = useCallback(async (): Promise<string> => {
-    try {
-      const res = await fetch('/api/auth/session');
-      if (!res.ok) return '';
-      const data = await res.json();
-      return data?.user?.email ?? '';
-    } catch {
-      return '';
-    }
-  }, []);
-
   useEffect(() => {
     let cancelled = false;
-   (async () => {
+    (async () => {
       try {
-        const [refData, profile, email] = await Promise.all([loadReferenceData(), loadProfile(), loadEmail()]);
+        const [refData, profile] = await Promise.all([loadReferenceData(), loadProfile()]);
         if (cancelled) return;
 
         setAllProgramTypes(refData.programTypes);
         setAllDepartments(refData.departments);
         setAllClassGroups(refData.classGroups);
 
-        const candidateSn = profile?.student_no?.trim() || candidateStudentNo(email);
-        let derivedProgramTypeId: number | null = null;
-        let derivedDepartmentId: number | null = null;
-        let derivedGradeNo: number | null = null;
-
-        if (candidateSn) {
-          const parsed = parseStudentNo(candidateSn);
-          if (parsed) {
-            const pt = refData.programTypes.find(p => p.code === parsed.program_type_code);
-            if (pt && FROZEN_PROGRAM_TYPE_CODES.has(pt.code)) {
-              derivedProgramTypeId = pt.id;
-              derivedDepartmentId = resolveDepartmentId(refData.departments, parsed.dept_code);
-              const entryYear = parseInt(parsed.entry_year, 10);
-              if (!isNaN(entryYear)) {
-                derivedGradeNo = 115 - entryYear;
-                if (derivedGradeNo < 1) derivedGradeNo = 1;
-                if (derivedGradeNo > 5) derivedGradeNo = 5;
-              }
-            }
-          }
-        }
-
+        // 不再自動推導：所有學籍欄位由使用者自行選擇
         setForm({
           display_name: profile?.display_name ?? '',
-          student_no: profile?.student_no ?? candidateSn,
-          contact_email: profile?.contact_email ?? email,
-          program_type_id: profile?.program_type_id != null ? String(profile.program_type_id) : derivedProgramTypeId != null ? String(derivedProgramTypeId) : '',
-          department_id: profile?.department_id != null ? String(profile.department_id) : derivedDepartmentId != null ? String(derivedDepartmentId) : '',
+          student_no: profile?.student_no ?? '',
+          contact_email: profile?.contact_email ?? '',
+          program_type_id: profile?.program_type_id != null ? String(profile.program_type_id) : '',
+          department_id: profile?.department_id != null ? String(profile.department_id) : '',
           class_group_id: profile?.class_group_id != null ? String(profile.class_group_id) : '',
-          grade_no: profile?.grade_no != null ? String(profile.grade_no) : derivedGradeNo != null ? String(derivedGradeNo) : '',
+          grade_no: profile?.grade_no != null ? String(profile.grade_no) : '',
         });
 
-        initDone.current = true;
       } catch {
         if (!cancelled) setFormError('無法載入資料，請重新整理頁面。');
       } finally {
@@ -209,69 +116,61 @@ export default function FirstLoginPage() {
       }
     })();
     return () => { cancelled = true; };
-  }, [loadReferenceData, loadProfile, loadEmail]);
+  }, [loadReferenceData, loadProfile]);
 
+  // 連動：選擇學制 → 過濾系所
   useEffect(() => {
     if (form.program_type_id) {
       setFilteredDepartments(allDepartments.filter(d => String(d.program_type) === form.program_type_id));
     } else {
       setFilteredDepartments([]);
     }
-    if (!initDone.current) return;
+    // 學制改變時，清空系所、班級、年級
     setForm(prev => ({
       ...prev,
-      department_id: userTouched['department_id'] ? prev.department_id : '',
-      class_group_id: userTouched['class_group_id'] ? prev.class_group_id : '',
-      grade_no: userTouched['grade_no'] ? prev.grade_no : '',
+      department_id: '',
+      class_group_id: '',
+      grade_no: '',
     }));
     setFilteredClassGroups([]);
-  }, [form.program_type_id, allDepartments, userTouched]);
+  }, [form.program_type_id, allDepartments]);
 
+  // 連動：選擇系所 → 過濾班級（班級連動年級一起篩選）
   useEffect(() => {
     if (form.department_id) {
-      const dbGrade = toDbGradeNo(form.grade_no);
+      const gradeValue = form.grade_no ? parseInt(form.grade_no, 10) : null;
       setFilteredClassGroups(
         allClassGroups.filter(c => {
           const deptMatch = String(c.department) === form.department_id;
-          const gradeMatch = dbGrade !== null ? c.grade_no === dbGrade : true;
+          const gradeMatch = gradeValue !== null ? c.grade_no === gradeValue * 10 : true;
           return deptMatch && gradeMatch;
         })
       );
     } else {
       setFilteredClassGroups([]);
     }
+    // 系所改變時，清空班級
+    setForm(prev => ({ ...prev, class_group_id: '' }));
   }, [form.department_id, form.grade_no, allClassGroups]);
-
-  const handleStudentNoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    setForm(prev => ({ ...prev, student_no: raw }));
-    if (!userTouched['program_type_id'] && !userTouched['department_id'] && !userTouched['grade_no']) {
-      const parsed = parseStudentNo(raw);
-      if (parsed) {
-        const pt = allProgramTypes.find(p => p.code === parsed.program_type_code);
-        if (pt && FROZEN_PROGRAM_TYPE_CODES.has(pt.code)) {
-          const deptId = resolveDepartmentId(allDepartments, parsed.dept_code);
-          const entryYear = parseInt(parsed.entry_year, 10);
-          let grade = '';
-          if (!isNaN(entryYear)) {
-            const g = 115 - entryYear;
-            if (g >= 1 && g <= 5) grade = String(g);
-          }
-          setForm(prev => ({
-            ...prev,
-            program_type_id: String(pt.id),
-            department_id: deptId != null ? String(deptId) : prev.department_id,
-            grade_no: grade || prev.grade_no,
-          }));
-        }
-      }
-    }
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setForm(prev => ({ ...prev, [name]: value }));
-    setUserTouched(prev => ({ ...prev, [name]: true }));
+    // 年級改變時，重新過濾班級
+    if (name === 'grade_no') {
+      if (form.department_id) {
+        const gradeValue = value ? parseInt(value, 10) : null;
+        setFilteredClassGroups(
+          allClassGroups.filter(c => {
+            const deptMatch = String(c.department) === form.department_id;
+            const gradeMatch = gradeValue !== null ? c.grade_no === gradeValue * 10 : true;
+            return deptMatch && gradeMatch;
+          })
+        );
+        setForm(prev => ({ ...prev, grade_no: value, class_group_id: '' }));
+        return;
+      }
+    }
     if (errors[name]) {
       setErrors(err => { const n = { ...err }; delete n[name]; return n; });
     }
@@ -408,7 +307,7 @@ export default function FirstLoginPage() {
 
               <div className="mb-3">
                 <label className="form-label" htmlFor="student_no" style={{ color: '#1e140a', fontWeight: '500' }}>學號</label>
-                <input type="text" id="student_no" name="student_no" className="form-control" style={{ borderColor: '#e0d8c8', color: '#1e140a' }} value={form.student_no} onChange={handleStudentNoChange} placeholder="填寫後將自動帶入學制、系所與年級" />
+                <input type="text" id="student_no" name="student_no" className="form-control" style={{ borderColor: '#e0d8c8', color: '#1e140a' }} value={form.student_no} onChange={handleChange} placeholder="選填" />
               </div>
 
               <div className="mb-3">
@@ -424,7 +323,7 @@ export default function FirstLoginPage() {
                 <label className="form-label" htmlFor="program_type_id" style={{ color: '#1e140a', fontWeight: '500' }}>學制 <span style={{ color: '#9b2335' }}>*</span></label>
                 <select id="program_type_id" name="program_type_id" className="form-select" style={{ borderColor: errors.program_type_id ? '#9b2335' : '#e0d8c8', boxShadow: errors.program_type_id ? '0 0 0 0.2rem rgba(155, 35, 53, 0.25)' : 'none', color: '#1e140a' }} value={form.program_type_id} onChange={handleChange}>
                   <option value="">請選擇學制</option>
-                  {allProgramTypes.filter(pt => FROZEN_PROGRAM_TYPE_CODES.has(pt.code)).map(pt => (<option key={pt.id} value={pt.id}>{pt.name_zh}</option>))}
+                  {allProgramTypes.map(pt => (<option key={pt.id} value={pt.id}>{pt.name_zh}</option>))}
                 </select>
                 {errors.program_type_id && <div style={{ color: '#9b2335', fontSize: '0.875rem', marginTop: '0.25rem' }}>{errors.program_type_id}</div>}
               </div>

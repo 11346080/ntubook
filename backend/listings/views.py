@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from django.views.generic import ListView, DetailView, CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404
@@ -874,6 +875,46 @@ def recommended_listings_api(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
+def listing_image_api(request, listing_id, image_id):
+    """
+    讀取指定刊登的圖片 / Get listing image binary data
+    公開存取 / Public access
+    
+    URL: /api/listings/<listing_id>/images/<image_id>/
+    
+    Response (200):
+        圖片的二進制資料，Content-Type 為 image 的 MIME type
+    """
+    try:
+        image = ListingImage.objects.select_related('listing').get(
+            id=image_id,
+            listing_id=listing_id
+        )
+        
+        if not image.image_binary:
+            return Response(
+                {'success': False, 'error': {'code': 'NO_IMAGE', 'message': '圖片資料為空'}},
+                status=404
+            )
+        
+        return HttpResponse(
+            image.image_binary,
+            content_type=image.mime_type or 'image/jpeg'
+        )
+    except ListingImage.DoesNotExist:
+        return Response(
+            {'success': False, 'error': {'code': 'NOT_FOUND', 'message': '找不到圖片'}},
+            status=404
+        )
+    except Exception as e:
+        return Response(
+            {'success': False, 'error': {'code': 'ERROR', 'message': str(e)}},
+            status=400
+        )
+
+
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_listings_api(request):
     """
@@ -894,7 +935,14 @@ def my_listings_api(request):
                 "status": "PENDING|AVAILABLE|RESERVED|SOLD|OFF_SHELF|REJECTED",
                 "reject_reason": "...|null",
                 "listing_images": [
-                    { "file_path": "..." }
+                    {
+                        "id": 1,
+                        "file_name": "listing_1_img_1.jpeg",
+                        "mime_type": "image/jpeg",
+                        "is_primary": true,
+                        "sort_order": 0,
+                        "file_path": "/api/listings/1/images/1/"
+                    }
                 ],
                 "created_at": "ISO datetime"
             }
@@ -912,8 +960,21 @@ def my_listings_api(request):
         # 序列化簡化版本（用於列表顯示）
         data = []
         for listing in listings:
-            images = list(listing.images.values('file_path'))
-            
+            # 使用真實存在的欄位（id, file_name, mime_type, is_primary, sort_order）
+            # 並動態組出前端需要的 file_path URL
+            images = [
+                {
+                    'id': img.id,
+                    'file_name': img.file_name,
+                    'mime_type': img.mime_type,
+                    'is_primary': img.is_primary,
+                    'sort_order': img.sort_order,
+                    # 動態產生的圖片 URL，透過 GET /api/listings/<listing_id>/images/<image_id>/
+                    'file_path': f'/api/listings/{listing.id}/images/{img.id}/',
+                }
+                for img in listing.images.all()
+            ]
+
             data.append({
                 'id': listing.id,
                 'book': {

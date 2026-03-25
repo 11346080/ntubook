@@ -140,10 +140,10 @@ def user_favorites_api(request):
 
         data = []
         for fav in favorites:
-            # 找到這本書最新的已發佈刊登
+            # 找到這本書最新的已上架刊登
             listing = Listing.objects.filter(
                 book=fav.book,
-                status='PUBLISHED'
+                status=Listing.Status.AVAILABLE
             ).select_related('seller__profile').first()
 
             fav_data = {
