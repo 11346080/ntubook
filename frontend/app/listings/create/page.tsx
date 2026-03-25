@@ -31,7 +31,7 @@ const SENSITIVE_WORDS = [
 function checkSensitiveWords(text: string): string[] {
   const found: string[] = [];
   const lowerText = text.toLowerCase();
-  
+
   for (const word of SENSITIVE_WORDS) {
     if (lowerText.includes(word.toLowerCase())) {
       if (!found.includes(word)) {
@@ -39,7 +39,7 @@ function checkSensitiveWords(text: string): string[] {
       }
     }
   }
-  
+
   return found;
 }
 
@@ -49,13 +49,13 @@ interface BookData {
   publisher: string;
   isbn13?: string;
   isbn10?: string;
+  publication_year?: number | null;
+  publication_date_text?: string | null;
+  cover_image_url?: string | null;
 }
 
 interface FormState {
-  book: BookData & {
-    isbn13?: string;
-    isbn10?: string;
-  };
+  book: BookData;
   campusId: string;
   programTypeId: string;
   departmentId: string;
@@ -67,7 +67,33 @@ interface FormState {
   description: string;
   sellerNote?: string;
   images: File[];
-  imagePreviews: string[]; // Data URLs for persistent preview even if local files are deleted
+  imagePreviews: string[];
+}
+
+interface IsbnQueryMeta {
+  source?: 'local' | 'external_api' | 'not_found' | 'error';
+  message?: string;
+  isNew?: boolean;
+}
+
+// /api/isbn 後端回應格式（消除 unknown，讓子屬性存取型別安全）
+interface IsbnApiResponse {
+  success: boolean;
+  error?: string;
+  note?: string;
+  data?: {
+    isbn13?: string;
+    isbn10?: string;
+    title?: string;
+    author?: string;
+    publisher?: string;
+    publication_year?: number | null;
+    publication_date_text?: string | null;
+    cover_image_url?: string | null;
+  };
+  _source?: 'local' | 'external_api';
+  _message?: string;
+  _is_new?: boolean;
 }
 
 interface ClassGroup {
@@ -119,7 +145,6 @@ interface Message {
   details?: string[];
 }
 
-// 條件等級映射（中文 → 英文）
 const CONDITION_LEVEL_MAP: Record<string, string> = {
   '全新': 'LIKE_NEW',
   '近全新': 'LIKE_NEW',
@@ -140,8 +165,7 @@ export default function CreateListingPage() {
   const [isCheckingImage, setIsCheckingImage] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
-  
-  // 四級聯動選擇狀態
+
   const [campusList, setCampusList] = useState<Campus[]>([]);
   const [programTypeList, setProgramTypeList] = useState<ProgramType[]>([]);
   const [departmentList, setDepartmentList] = useState<Department[]>([]);
@@ -157,6 +181,9 @@ export default function CreateListingPage() {
       publisher: '',
       isbn13: '',
       isbn10: '',
+      publication_year: null,
+      publication_date_text: null,
+      cover_image_url: null,
     },
     campusId: '',
     programTypeId: '',
@@ -173,18 +200,18 @@ export default function CreateListingPage() {
   });
 
   const [isbnInput, setIsbnInput] = useState('');
+  const [isbnQueryMeta, setIsbnQueryMeta] = useState<IsbnQueryMeta>({});
 
   // 加載四級選擇數據 + 初始化 CSRF token + 获取用户信息
   useEffect(() => {
     const initializeAndFetchData = async () => {
       setIsLoadingData(true);
       try {
-        // 需要孤立字段
         await fetch(`${API_BASE_URL}/listings/`, {
           method: 'GET',
           credentials: 'include',
         });
-        // CSRF token initialized
+
         const profileRes = await fetch('/api/accounts/profile/', {
           method: 'GET',
           credentials: 'include',
@@ -192,36 +219,30 @@ export default function CreateListingPage() {
         if (profileRes.ok) {
           const profile: ProfileResponse = await profileRes.json();
           setUserProfile(profile);
-          // 計算顯示年級（用戶年級 - 1）
           if (profile.grade_no) {
             const displayGrade = profile.grade_no - 1;
             setUserGradeDisplay(
-              displayGrade === 1 ? '一年級' : 
-              displayGrade === 2 ? '二年級' : 
-              displayGrade === 3 ? '三年級' : 
-              displayGrade === 4 ? '四年級' : 
+              displayGrade === 1 ? '一年級' :
+              displayGrade === 2 ? '二年級' :
+              displayGrade === 3 ? '三年級' :
+              displayGrade === 4 ? '四年級' :
               `${displayGrade}年級`
             );
           }
-          // User profile loaded
         }
 
-        // 2️⃣ 加載校區列表
         const campusRes = await fetch(`${API_BASE_URL}/core/campuses/`);
         if (campusRes.ok) {
           const campusData = await campusRes.json();
           const campuses = Array.isArray(campusData) ? campusData : campusData.data || [];
           setCampusList(campuses);
-          // Campuses loaded
         }
 
-        // 3️⃣ 加載學制列表
         const progRes = await fetch(`${API_BASE_URL}/core/program-types/`);
         if (progRes.ok) {
           const progData = await progRes.json();
           const programs = Array.isArray(progData) ? progData : progData.data || [];
           setProgramTypeList(programs);
-          // Program types loaded
         }
       } catch (error) {
         // Failed to load base data
@@ -233,43 +254,35 @@ export default function CreateListingPage() {
     initializeAndFetchData();
   }, []);
 
-  // 自動填充用戶信息（當所有數據都加載完後）
+  // 自動填充用戶信息
   useEffect(() => {
     if (!userProfile || !campusList.length || !programTypeList.length) {
       return;
     }
 
-    // 如果用戶有部門和學制信息，自動加載科系然後自動選擇
     if (userProfile.program_type_id && userProfile.department_id) {
       const loadAndAutoFill = async () => {
         try {
-          
-          // 獲取該學制的所有科系
           const response = await fetch(
             `${API_BASE_URL}/core/departments/?program_type_id=${userProfile.program_type_id}`
           );
-          
+
           if (response.ok) {
             const data = await response.json();
             const depts = Array.isArray(data) ? data : data.data || [];
             setDepartmentList(depts);
-            
-            // 找到用戶所在的科系
+
             const userDept = depts.find((d: Department) => d.id === userProfile.department_id);
-            
+
             if (userDept) {
-              
-              // 從科系的campus字段確定校區
               let campusId = '';
               if (userDept.campus) {
                 const campus = campusList.find(c => c.id === userDept.campus);
                 if (campus) {
                   campusId = String(campus.id);
-                  // 校區 determined
                 }
               }
-              
-              // 自動填充表單
+
               setFormState(prev => ({
                 ...prev,
                 campusId,
@@ -277,14 +290,13 @@ export default function CreateListingPage() {
                 departmentId: String(userProfile.department_id),
                 classGroupId: String(userProfile.class_group_id || ''),
               }));
-              // User info auto-filled
             }
           }
         } catch (error) {
           // Auto-fill failed
         }
       };
-      
+
       loadAndAutoFill();
     }
   }, [userProfile, campusList, programTypeList]);
@@ -332,7 +344,6 @@ export default function CreateListingPage() {
           const data = await response.json();
           const groups = Array.isArray(data) ? data : data.data || [];
           setClassGroups(groups);
-          // Class groups loaded
         }
       } catch (error) {
         // Failed to load class groups
@@ -360,53 +371,106 @@ export default function CreateListingPage() {
 
     setIsLoadingIsbn(true);
     clearMessage();
+    setIsbnQueryMeta({});
 
     try {
+      // [DEBUG] 查詢前
+      console.log('[ISBN Lookup] 開始查詢, isbn=', isbnInput);
+
       const response = await fetch('/api/isbn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isbn: isbnInput }),
       });
 
-      const data = await response.json();
+      // [DEBUG] 收到 /api/isbn 回應
+      console.log('[ISBN Lookup] /api/isbn 回應, status=', response.status);
 
-      if (response.status === 503) {
-        // 服務暫時不可用 - 引導用戶手動填寫
-        setMessage({
-          type: 'info',
-          title: '無法自動查詢',
-          content: '暫時無法查詢書籍資訊，但您可以直接填寫書籍詳細資料。系統會為您自動指配刊登號碼。',
-        });
-      } else if (data.success && data.data) {
-        setFormState((prev) => ({
-          ...prev,
-          book: {
-            ...prev.book,
-            ...data.data,
-          },
-        }));
-        
-        // 同時更新 isbnInput 以顯示查詢到的 ISBN
-        setIsbnInput(data.data.isbn13 || data.data.isbn10 || isbnInput);
+      const data: IsbnApiResponse = await response.json();
 
+      // [DEBUG] 解析後的資料內容
+      console.log('[ISBN Lookup] /api/isbn 回應內容, data=', JSON.stringify(data));
+
+      // -------- 後端直接錯誤 --------
+      if (!response.ok) {
         setMessage({
-          type: 'success',
-          title: '查詢成功',
-          content: '書籍資訊已自動帶入，請確認無誤並補充其餘項目。',
+          type: 'error',
+          title: '查詢服務暫停',
+          content: data.error || 'ISBN 查詢服務目前無法使用，請稍後再試，或直接手動填寫書籍資訊。',
+          details: data.note ? [data.note] : undefined,
         });
-      } else {
+        setIsbnQueryMeta({ source: 'error', message: '服務暫停' });
+        return;
+      }
+
+      // -------- 查無資料 --------
+      if (!data.success) {
+        setIsbnQueryMeta({ source: 'not_found', message: data.error });
         setMessage({
           type: 'warning',
-          title: '查詢無結果',
-          content: data.error || '暫未查獲此 ISBN 之書籍，但您可以手動填寫書籍資訊並繼續刊登。',
+          title: '查無結果',
+          content: data.error || '此 ISBN 查無書籍資訊，請確認號碼正確，或直接手動填寫。',
+          details: data.note ? [data.note] : undefined,
         });
+        return;
+      }
+
+      // -------- 查詢成功 --------
+      if (data.data) {
+        const bookInfo = data.data;
+        const source = data._source as 'local' | 'external_api';
+        const isNew = data._is_new as boolean;
+        const apiMessage = data._message as string;
+
+        // 只填「目前為空」的欄位，避免覆蓋使用者已填內容
+        setFormState((prev) => {
+          const updates: Partial<BookData> = {};
+          if (!prev.book.title && bookInfo.title) updates.title = bookInfo.title;
+          if (!prev.book.author && bookInfo.author) updates.author = bookInfo.author;
+          if (!prev.book.publisher && bookInfo.publisher) updates.publisher = bookInfo.publisher;
+          if (!prev.book.isbn13 && bookInfo.isbn13) updates.isbn13 = bookInfo.isbn13;
+          if (!prev.book.isbn10 && bookInfo.isbn10) updates.isbn10 = bookInfo.isbn10;
+          if (!prev.book.publication_year && bookInfo.publication_year) updates.publication_year = bookInfo.publication_year;
+          if (!prev.book.publication_date_text && bookInfo.publication_date_text) updates.publication_date_text = bookInfo.publication_date_text;
+          if (!prev.book.cover_image_url && bookInfo.cover_image_url) updates.cover_image_url = bookInfo.cover_image_url;
+
+          return {
+            ...prev,
+            book: { ...prev.book, ...updates },
+          };
+        });
+
+        // 同步 isbnInput 顯示（若有 isbn13）
+        if (bookInfo.isbn13) {
+          setIsbnInput(bookInfo.isbn13);
+        } else if (bookInfo.isbn10) {
+          setIsbnInput(bookInfo.isbn10);
+        }
+
+        // 記錄查詢元資料
+        setIsbnQueryMeta({ source, isNew, message: apiMessage });
+
+        // 根據來源給出不同色調的成功提示
+        if (source === 'local') {
+          setMessage({
+            type: 'success',
+            title: '從本地資料庫取得',
+            content: apiMessage || '書籍資訊已自動帶入，請確認無誤並補充其餘項目。',
+          });
+        } else if (source === 'external_api') {
+          setMessage({
+            type: 'success',
+            title: isNew ? '已從外部資料庫取得並寫入' : '已從外部資料庫取得',
+            content: apiMessage || '書籍資訊已自動帶入，請確認無誤並補充其餘項目。',
+          });
+        }
       }
     } catch (error) {
-      // ISBN query error
+      setIsbnQueryMeta({ source: 'error', message: '網路錯誤' });
       setMessage({
         type: 'warning',
         title: '無法連接',
-        content: '無法連接書籍資料庫，但您可以直接填寫書籍詳細資料。系統會為您自動指配刊登號碼。',
+        content: '無法連接書籍資料庫，但您可以直接填寫書籍詳細資料。',
       });
     } finally {
       setIsLoadingIsbn(false);
@@ -424,7 +488,6 @@ export default function CreateListingPage() {
     const validPreviews: string[] = [];
     const errors: string[] = [];
 
-    // 生成 data URL 的辅助函数
     const generateDataUrl = (file: File): Promise<string> => {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -437,19 +500,16 @@ export default function CreateListingPage() {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
-      // 检查文件类型
       if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
         errors.push(`${file.name}: 不支援此檔案格式`);
         continue;
       }
 
-      // 检查文件大小
       if (file.size > 10 * 1024 * 1024) {
         errors.push(`${file.name}: 檔案過大（超過 10MB）`);
         continue;
       }
 
-      // NSFW 检查
       const formData = new FormData();
       formData.append('image', file);
 
@@ -470,12 +530,10 @@ export default function CreateListingPage() {
           continue;
         }
 
-        // 生成 data URL
         const dataUrl = await generateDataUrl(file);
         validImages.push(file);
         validPreviews.push(dataUrl);
       } catch (error) {
-        // NSFW check error - allow upload anyway
         const dataUrl = await generateDataUrl(file);
         validImages.push(file);
         validPreviews.push(dataUrl);
@@ -542,13 +600,10 @@ export default function CreateListingPage() {
     handleImageUpload(e.dataTransfer.files);
   };
 
-  // 提交表单
-  // 获取 CSRF 令牌
   const getCsrfToken = (): string => {
-    // 方法 1: 從 Cookie 獲取
     const name = 'csrftoken';
     let cookieValue = '';
-    
+
     if (document.cookie && document.cookie !== '') {
       const cookies = document.cookie.split(';');
       for (let i = 0; i < cookies.length; i++) {
@@ -560,7 +615,6 @@ export default function CreateListingPage() {
       }
     }
 
-    // 方法 2: 從 Meta Tag 獲取（備用）
     if (!cookieValue) {
       const tokenElement = document.querySelector('meta[name="csrf-token"]');
       if (tokenElement) {
@@ -568,7 +622,6 @@ export default function CreateListingPage() {
       }
     }
 
-    // 方法 3: 從 DOM 元素獲取（Django 表單中的隱藏字段）
     if (!cookieValue) {
       const inputElement = document.querySelector('input[name="csrfmiddlewaretoken"]') as HTMLInputElement;
       if (inputElement) {
@@ -576,7 +629,6 @@ export default function CreateListingPage() {
       }
     }
 
-    // CSRF token obtained
     return cookieValue;
   };
 
@@ -584,26 +636,22 @@ export default function CreateListingPage() {
     e.preventDefault();
     clearMessage();
 
-    // 验证必填字段
     const errors: string[] = [];
     const price = parseFloat(formState.usedPrice);
     const year = parseInt(formState.originAcademicYear);
 
-    // Form validation
     if (!formState.book.title?.trim()) errors.push('書名');
     if (!formState.book.author?.trim()) errors.push('作者');
     if (!formState.book.publisher?.trim()) errors.push('出版社');
-    
-    // 檢查價格是否是有效的數字且大於 0
+
     if (!formState.usedPrice || isNaN(price) || price <= 0) {
       errors.push('售價（需為有效數字）');
     }
-    
-    // 檢查年份是否是有效的數字
+
     if (!formState.originAcademicYear || isNaN(year) || year <= 0) {
       errors.push('課程年份（需為有效數字）');
     }
-    
+
     if (!formState.originTerm) errors.push('學期');
     if (!formState.campusId) errors.push('校區');
     if (!formState.programTypeId) errors.push('學制');
@@ -620,8 +668,6 @@ export default function CreateListingPage() {
       return;
     }
 
-    // Form validation passed\n
-    // 检查敏感词
     const titleSensitive = checkSensitiveWords(formState.book.title);
     const descriptionSensitive = checkSensitiveWords(formState.description);
     const allSensitive = [...new Set([...titleSensitive, ...descriptionSensitive])];
@@ -639,9 +685,6 @@ export default function CreateListingPage() {
     setIsSubmitting(true);
 
     try {
-      // Starting submission
-      
-      // 转换图片为 base64
       const imagePromises = formState.images.map(
         (file) =>
           new Promise<string>((resolve, reject) => {
@@ -655,26 +698,20 @@ export default function CreateListingPage() {
       );
 
       const imageBase64List = await Promise.all(imagePromises);
-      // Images converted
 
-      // 如果用户输入了ISBN但没有查询，使用输入值
       let isbn13 = formState.book.isbn13 || '';
       let isbn10 = formState.book.isbn10 || '';
-      
-      // 优先使用查询结果，其次使用用户输入
+
       if (!isbn13 && !isbn10 && isbnInput.trim()) {
-        // 简单判断：如果输入长度是13就当isbn13，10就当isbn10
         if (isbnInput.trim().replace(/[^0-9X]/g, '').length === 13) {
           isbn13 = isbnInput.trim();
         } else if (isbnInput.trim().replace(/[^0-9X]/g, '').length === 10) {
           isbn10 = isbnInput.trim();
         } else {
-          // 否则默认当isbn13
           isbn13 = isbnInput.trim();
         }
       }
 
-      // 构建提交数据
       const submitData = {
         new_book: {
           isbn13: isbn13,
@@ -682,6 +719,7 @@ export default function CreateListingPage() {
           title: formState.book.title,
           author_display: formState.book.author,
           publisher: formState.book.publisher,
+          publication_date_text: formState.book.publication_date_text || null,
         },
         origin_academic_year: parseInt(formState.originAcademicYear),
         origin_term: parseInt(formState.originTerm),
@@ -693,57 +731,39 @@ export default function CreateListingPage() {
         images: imageBase64List,
       };
 
-      // Submit data prepared
-
-      // 获取 CSRF 令牌
       const csrfToken = getCsrfToken();
-      // CSRF token obtained
 
-      // 提交至 Django 后端
       const response = await fetch(`${API_BASE_URL}/listings/`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(csrfToken && { 'X-CSRFToken': csrfToken }),
-          },
-          body: JSON.stringify(submitData),
-          credentials: 'include',
-        }
-      );
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(csrfToken && { 'X-CSRFToken': csrfToken }),
+        },
+        body: JSON.stringify(submitData),
+        credentials: 'include',
+      });
 
-      // Response received
-      
-      // Parse response safely
       let responseData;
       const contentType = response.headers.get('content-type');
-      
+
       if (contentType && contentType.includes('application/json')) {
         responseData = await response.json();
       } else {
         const text = await response.text();
-        // Non-JSON response
         throw new Error('Server returned non-JSON response');
       }
 
-      // Response data processed
-
       if (responseData.success && responseData.data?.id) {
-        // Listing created successfully
-        
-        // 顯示審核中的提示訊息
         setMessage({
           type: 'success',
           title: '書卷已遞交',
           content: '小二正在為您審核，請稍候...（通常在 1 分鐘內完成）',
         });
 
-        // 延遲 2 秒後導向會員中心
         setTimeout(() => {
           router.push('/dashboard');
         }, 2000);
       } else {
-        // Submission failed
-        
         setMessage({
           type: 'error',
           title: '刊登失敗',
@@ -752,10 +772,8 @@ export default function CreateListingPage() {
         });
       }
     } catch (error) {
-      // Submit error
-      
       const errorMessage = error instanceof Error ? error.message : String(error);
-      
+
       setMessage({
         type: 'error',
         title: '提交錯誤',
@@ -763,14 +781,12 @@ export default function CreateListingPage() {
       });
     } finally {
       setIsSubmitting(false);
-      // Submission process completed
     }
   };
 
   return (
     <div className={styles.container}>
       <div className={styles.wrapper}>
-        {/* 标题區塊 */}
         <div className={styles.headerSection}>
           <h1 className={styles.pageTitle}>新增刊登</h1>
           <p className={styles.pageSubtitle}>
@@ -778,7 +794,6 @@ export default function CreateListingPage() {
           </p>
         </div>
 
-        {/* 提示訊息 */}
         {message && (
           <div className={`${styles.messageBox} ${styles[`message${message.type.charAt(0).toUpperCase() + message.type.slice(1)}`]}`}>
             <div className={styles.messageTitle}>{message.title}</div>
@@ -902,7 +917,6 @@ export default function CreateListingPage() {
                     }));
                   }}
                   onInput={(e) => {
-                    // 確保立即更新，處理某些瀏覽器延遲問題
                     setFormState((prev) => ({
                       ...prev,
                       usedPrice: (e.target as HTMLInputElement).value,
@@ -949,7 +963,6 @@ export default function CreateListingPage() {
                     }));
                   }}
                   onInput={(e) => {
-                    // 確保立即更新，處理某些瀏覽器延遲問題
                     setFormState((prev) => ({
                       ...prev,
                       originAcademicYear: (e.target as HTMLInputElement).value,
@@ -973,21 +986,6 @@ export default function CreateListingPage() {
                   <option value="1">第一學期</option>
                   <option value="2">第二學期</option>
                 </select>
-              </div>
-
-              {/* 適用年級說明 */}
-              <div className={styles.infoBanner} style={{ 
-                backgroundColor: '#fef5e7', 
-                border: '1px solid #f8d7a1',
-                borderRadius: '4px',
-                padding: '12px',
-                marginBottom: '20px',
-                fontSize: '0.9rem',
-                color: '#856404'
-              }}>
-                <i className="fas fa-info-circle" style={{ marginRight: '8px', color: '#d39e00' }}></i>
-                <strong>適用年級說明：</strong>  
-                目前選項表示這本書最適合哪個年級的學生使用。系統已根據您的個人資料自動預填。
               </div>
 
               <div className={styles.inputField}>
@@ -1169,7 +1167,6 @@ export default function CreateListingPage() {
               disabled={isCheckingImage}
             />
 
-            {/* 圖片預覽 */}
             {formState.images.length > 0 && (
               <div className={styles.imagePreviewList}>
                 {formState.imagePreviews.map((previewUrl, idx) => (
@@ -1218,7 +1215,6 @@ export default function CreateListingPage() {
         </form>
       </div>
 
-      {/* Loading Overlay */}
       {(isSubmitting || isCheckingImage) && (
         <div className={styles.loadingOverlay}>
           <div className={styles.loadingSpinner}></div>

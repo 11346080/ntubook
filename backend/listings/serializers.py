@@ -300,7 +300,6 @@ class NewBookSerializer(serializers.Serializer):
     author_display = serializers.CharField(max_length=255, required=True)
     publisher = serializers.CharField(max_length=255, required=True)
     publication_date_text = serializers.CharField(max_length=50, required=False, allow_blank=True)
-    edition = serializers.CharField(max_length=50, required=False, allow_blank=True)
 
 
 class ListingCreateSerializer(serializers.Serializer):

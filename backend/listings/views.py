@@ -552,8 +552,7 @@ def create_listing_api(request):
             "title": "...",
             "author_display": "...",
             "publisher": "...",
-            "publication_date_text": "...|null",
-            "edition": "...|null"
+            "publication_date_text": "...|null"
         } or null,
         "origin_academic_year": int,
         "origin_term": 1|2,
@@ -642,7 +641,6 @@ def create_listing_api(request):
                     author_display=new_book_data['author_display'],
                     publisher=new_book_data['publisher'],
                     publication_date_text=new_book_data.get('publication_date_text'),
-                    edition=new_book_data.get('edition'),
                     metadata_source='MANUAL',
                     metadata_status='MANUALLY_CONFIRMED'
                 )

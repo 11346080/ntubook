@@ -4,6 +4,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .models import Book, BookApplicability, BookFavorite
 from .serializers import BookSerializer, BookApplicabilitySerializer
+from .isbn_service import lookup_isbn
 
 
 @api_view(['GET'])
@@ -30,13 +31,83 @@ def bookapplicability_list_api(request):
     return Response(serializer.data)
 
 
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def isbn_lookup_api(request):
+    """
+    ISBN 查詢 API（本地優先，外部 API 回填）
+
+    Request:
+        POST /api/books/isbn/lookup/
+        Body: { "isbn": "9789576097690" }
+
+    Response (200):
+        {
+            "success": true,
+            "data": {
+                "source": "local" | "external_api" | "not_found",
+                "is_new": bool,
+                "book_id": int | null,
+                "book": {
+                    "id", "isbn13", "isbn10", "title",
+                    "author_display", "publisher",
+                    "publication_year", "publication_date_text",
+                    "edition", "cover_image_url"
+                } | null,
+                "message": "人類可讀訊息"
+            }
+        }
+    """
+    isbn = (request.data.get('isbn') or '').strip()
+    print(f'[ISBN API] 進入 ISBN 查詢 API, isbn={isbn}')
+
+    if not isbn:
+        return Response({
+            'success': False,
+            'error': {
+                'code': 'MISSING_ISBN',
+                'message': '請提供 ISBN'
+            }
+        }, status=400)
+
+    result = lookup_isbn(isbn)
+    print(
+        f'[ISBN API] lookup_isbn 回傳, source={result["source"]}, '
+        f'is_new={result.get("is_new")}, book_id={result.get("book_id")}, '
+        f'message={result.get("message")}'
+    )
+
+    if result['source'] == 'not_found':
+        return Response({
+            'success': False,
+            'data': {
+                'source': 'not_found',
+                'is_new': False,
+                'book_id': None,
+                'book': None,
+                'message': result['message'],
+            }
+        }, status=200)
+
+    return Response({
+        'success': True,
+        'data': {
+            'source': result['source'],
+            'is_new': result['is_new'],
+            'book_id': result['book_id'],
+            'book': result.get('book'),
+            'message': result['message'],
+        }
+    }, status=200)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_favorites_api(request):
     """
     獲取當前使用者的收藏書籍列表 / Get current user's favorite books
     需要登入 / Requires authentication
-    
+
     Response (200):
     {
         "success": true,
@@ -61,12 +132,12 @@ def user_favorites_api(request):
     """
     try:
         from listings.models import Listing
-        
+
         # 獲取使用者的所有收藏
         favorites = BookFavorite.objects.filter(
             user=request.user
         ).select_related('book').order_by('-created_at')
-        
+
         data = []
         for fav in favorites:
             # 找到這本書最新的已發佈刊登
@@ -74,7 +145,7 @@ def user_favorites_api(request):
                 book=fav.book,
                 status='PUBLISHED'
             ).select_related('seller__profile').first()
-            
+
             fav_data = {
                 'id': fav.id,
                 'book': {
@@ -86,22 +157,22 @@ def user_favorites_api(request):
                 'listing': None,
                 'created_at': fav.created_at.isoformat(),
             }
-            
+
             if listing:
                 fav_data['listing'] = {
                     'id': listing.id,
                     'used_price': float(listing.used_price),
                     'status': listing.status,
                 }
-            
+
             data.append(fav_data)
-        
+
         return Response({
             'success': True,
             'data': data,
             'count': len(data)
         })
-    
+
     except Exception as e:
         return Response({
             'success': False,
@@ -118,10 +189,10 @@ def favorite_toggle_api(request, book_id):
     """
     添加或移除書籍收藏 / Add or remove book favorite
     需要登入 / Requires authentication
-    
+
     POST: 添加收藏 / Add favorite
     DELETE: 移除收藏 / Remove favorite
-    
+
     Response (201/204):
     {
         "success": true,
@@ -130,13 +201,13 @@ def favorite_toggle_api(request, book_id):
     """
     try:
         book = Book.objects.get(id=book_id)
-        
+
         if request.method == 'POST':
             favorite, created = BookFavorite.objects.get_or_create(
                 user=request.user,
                 book=book
             )
-            
+
             if created:
                 return Response({
                     'success': True,
@@ -154,13 +225,13 @@ def favorite_toggle_api(request, book_id):
                         'book_id': book.id
                     }
                 }, status=200)
-        
+
         elif request.method == 'DELETE':
             deleted_count, _ = BookFavorite.objects.filter(
                 user=request.user,
                 book=book
             ).delete()
-            
+
             if deleted_count > 0:
                 return Response({
                     'success': True,
@@ -174,7 +245,7 @@ def favorite_toggle_api(request, book_id):
                         'message': '收藏不存在'
                     }
                 }, status=404)
-    
+
     except Book.DoesNotExist:
         return Response({
             'success': False,
@@ -191,4 +262,3 @@ def favorite_toggle_api(request, book_id):
                 'message': str(e)
             }
         }, status=400)
-

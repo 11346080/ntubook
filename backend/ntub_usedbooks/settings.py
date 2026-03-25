@@ -251,6 +251,10 @@ BOOTSTRAP_TOKEN_EXPIRES_SECONDS = 300  # 5 minutes
 # DJANGO_BOOTSTRAP_SECRET: secret for Next.js → Django bootstrap handshake
 DJANGO_BOOTSTRAP_SECRET = env('DJANGO_BOOTSTRAP_SECRET', default='')
 
+# ========== External ISBN API Configuration ==========
+# Caves Books 外部書目資料庫 API
+CAVES_BOOKS_API_URL = env('CAVES_BOOKS_API_URL', default='https://ec35api.cavesbooks.com.tw/api/SearchTB')
+
 # Google OAuth Provider Configuration
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
