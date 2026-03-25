@@ -56,11 +56,17 @@ interface ApiResponse {
 interface SearchResultsContentProps {
   keyword: string;
   sort: string;
+  program_type_id?: string;
+  department_id?: string;
+  grade_no?: string;
 }
 
 export default function SearchResultsContent({
   keyword,
   sort,
+  program_type_id,
+  department_id,
+  grade_no,
 }: SearchResultsContentProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,6 +90,15 @@ export default function SearchResultsContent({
         const params = new URLSearchParams();
         if (keyword) {
           params.append('keyword', keyword);
+        }
+        if (program_type_id) {
+          params.append('program_type_id', program_type_id);
+        }
+        if (department_id) {
+          params.append('department_id', department_id);
+        }
+        if (grade_no) {
+          params.append('grade_no', grade_no);
         }
         if (sort) {
           params.append('sort', sort);
@@ -134,7 +149,7 @@ export default function SearchResultsContent({
     };
 
     fetchListings();
-  }, [keyword, sort, currentPage]);
+  }, [keyword, sort, program_type_id, department_id, grade_no, currentPage]);
 
   const handlePageChange = (page: number) => {
     const newParams = new URLSearchParams(searchParams.toString());

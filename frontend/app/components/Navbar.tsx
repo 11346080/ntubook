@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import styles from '../style/Navbar.module.css';
+import NotificationPopup from './NotificationPopup';
+import { getUnreadCount } from '../../lib/notificationService';
 
 interface NavbarProps {
   initialAuth?: boolean;
@@ -20,6 +22,8 @@ export default function Navbar({ unreadNotifications = 0 }: NavbarProps) {
   const isHomePage = pathname === '/';
   const [scrolled, setScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(unreadNotifications);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -37,11 +41,17 @@ export default function Navbar({ unreadNotifications = 0 }: NavbarProps) {
     } else {
       document.body.style.overflow = '';
     }
-    
+
     return () => {
       document.body.style.overflow = '';
     };
   }, [isMenuOpen]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      getUnreadCount().then(count => setUnreadCount(count));
+    }
+  }, [isAuthenticated]);
 
   const handleLinkClick = () => {
     closeMenu();
@@ -178,19 +188,28 @@ export default function Navbar({ unreadNotifications = 0 }: NavbarProps) {
             </Link>
 
             {/* 通知 */}
-            <Link 
-              href="/notifications"
-              onClick={handleLinkClick}
-              className={`${styles.notificationBell}`}
-              title="通知"
-            >
-              <i className="fas fa-bell"></i>
-              {unreadNotifications > 0 && (
-                <span className={`${styles.badge}`}>
-                  {unreadNotifications}
-                </span>
+            <div className={`${styles.notificationPanel}`}>
+              <button
+                onClick={() => setIsNotificationOpen(v => !v)}
+                className={`${styles.notificationBell}`}
+                title="通知"
+                aria-label="開啟通知"
+              >
+                <i className="fas fa-bell"></i>
+                {unreadCount > 0 && (
+                  <span className={`${styles.badge}`}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              {isNotificationOpen && (
+                <NotificationPopup
+                  isOpen={isNotificationOpen}
+                  onClose={() => setIsNotificationOpen(false)}
+                  onUnreadCountChange={setUnreadCount}
+                />
               )}
-            </Link>
+            </div>
 
             {/* 登入 */}
             <div className={`${styles.authButtons}`}>

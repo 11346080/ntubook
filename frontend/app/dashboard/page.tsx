@@ -34,7 +34,7 @@ interface Listing {
   status: 'DRAFT' | 'PENDING' | 'PUBLISHED' | 'RESERVED' | 'SOLD' | 'OFF_SHELF' | 'REJECTED';
   reject_reason?: string;
   created_at: string;
-  listing_images?: Array<{ file_path: string }>;
+  images?: Array<{ id: number; file_name: string; mime_type: string; is_primary: boolean; sort_order: number; file_path: string }>;
 }
 
 interface Favorite {
@@ -366,9 +366,17 @@ export default function DashboardPage() {
     loadTabData();
   }, [activeTab, initialStatsLoaded, router]);
 
-  // 根據系別ID篩選班級
-  const filteredClassGroups = form.department_id
-    ? allClassGroups.filter(c => String(c.department) === form.department_id)
+  // 根據系別ID篩選班級（學制 + 系所 + 年級三條件同時滿足）
+  // 注意：department 可能殘留舊值（學制改變但 department 未清空），需同步檢查 program_type_id
+  const filteredClassGroups = form.department_id && form.program_type_id
+    ? allClassGroups.filter(c => {
+        const progMatch = String(c.program_type) === form.program_type_id;
+        const deptMatch = String(c.department) === form.department_id;
+        // DB 中 grade_no 是 10/20/30，前端 form 是 1/2/3，需乘以 10 比對
+        const gradeValue = form.grade_no ? parseInt(form.grade_no, 10) : null;
+        const gradeMatch = gradeValue !== null ? c.grade_no === gradeValue * 10 : true;
+        return progMatch && deptMatch && gradeMatch;
+      })
     : allClassGroups;
 
   // 根據學制篩選系所（當學制改變時，清空已選的系所和班級）
@@ -380,13 +388,18 @@ export default function DashboardPage() {
     const { name, value } = e.target;
     setForm(f => {
       const next = { ...f, [name]: value };
-      // When program_type changes, reset department and class_group
+      // When program_type changes, reset department, grade and class_group
       if (name === 'program_type_id') {
         next.department_id = '';
         next.class_group_id = '';
+        next.grade_no = '';
       }
       // When department changes, reset class_group
       if (name === 'department_id') {
+        next.class_group_id = '';
+      }
+      // When grade_no changes, reset class_group (班級需重新過濾)
+      if (name === 'grade_no') {
         next.class_group_id = '';
       }
       return next;
@@ -649,32 +662,6 @@ export default function DashboardPage() {
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', color: '#1e140a', fontWeight: '600' }}>
-                  班級
-                </label>
-                <select
-                  name="class_group_id"
-                  value={form.class_group_id}
-                  onChange={handleChange}
-                  disabled={!form.department_id}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid #e0d8c8',
-                    borderRadius: '6px',
-                    fontSize: '1rem',
-                    fontFamily: 'inherit',
-                    backgroundColor: form.department_id ? '#fff' : '#f5edd8',
-                    color: form.department_id ? '#1e140a' : '#999',
-                  }}
-                >
-                  <option value="">請選擇班級</option>
-                  {filteredClassGroups.map(cg => (
-                    <option key={cg.id} value={cg.id}>{cg.name_zh}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#1e140a', fontWeight: '600' }}>
                   年級
                 </label>
                 <select
@@ -697,6 +684,32 @@ export default function DashboardPage() {
                   <option value="3">三年級</option>
                   <option value="4">四年級</option>
                   <option value="5">五年級</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', color: '#1e140a', fontWeight: '600' }}>
+                  班級
+                </label>
+                <select
+                  name="class_group_id"
+                  value={form.class_group_id}
+                  onChange={handleChange}
+                  disabled={!form.department_id}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #e0d8c8',
+                    borderRadius: '6px',
+                    fontSize: '1rem',
+                    fontFamily: 'inherit',
+                    backgroundColor: form.department_id ? '#fff' : '#f5edd8',
+                    color: form.department_id ? '#1e140a' : '#999',
+                  }}
+                >
+                  <option value="">請選擇班級</option>
+                  {filteredClassGroups.map(cg => (
+                    <option key={cg.id} value={cg.id}>{cg.name_zh}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -748,9 +761,9 @@ export default function DashboardPage() {
               {listings.map(listing => (
                 <div key={listing.id} className={styles.card}>
                   <div className={styles.cardImage}>
-                    {listing.listing_images && listing.listing_images.length > 0 ? (
+                    {listing.images && listing.images.length > 0 ? (
                       <img
-                        src={`http://localhost:8000${listing.listing_images[0].file_path}`}
+                        src={`http://localhost:8000${listing.images[0].file_path}`}
                         alt={listing.book.title}
                         onError={e => {
                           (e.target as HTMLImageElement).style.display = 'none';
@@ -817,7 +830,7 @@ export default function DashboardPage() {
               <div className={styles.emptyStateSubText}>瀏覽喜愛的書籍，點擊心形按鈕即可收藏</div>
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+              <div style={{ overflowX: 'auto' }}>
               <table className={styles.reservationTable}>
                 <thead>
                   <tr>
@@ -830,7 +843,7 @@ export default function DashboardPage() {
                 </thead>
                 <tbody>
                   {favorites.map(favorite => (
-                    <tr key={favorite.id}>
+                    <tr key={favorite.id} onClick={() => favorite.listing_id && router.push(`/listings/${favorite.listing_id}`)} style={{ cursor: favorite.listing_id ? 'pointer' : 'default' }} onMouseEnter={(e) => { if (favorite.listing_id) e.currentTarget.style.backgroundColor = '#f9f9f9'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}>
                       <td>
                         <strong style={{ color: '#9b2335' }}>{favorite.book_title}</strong>
                         {favorite.book_author && (
@@ -854,7 +867,7 @@ export default function DashboardPage() {
                       </td>
                       <td>
                         <button
-                          onClick={() => handleRemoveFavorite(favorite.id, favorite.book_id)}
+                          onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(favorite.id, favorite.book_id); }}
                           className={`${styles.btnOutline} ${styles.btnSmall}`}
                         >
                           <i className="fas fa-trash"></i> 移除

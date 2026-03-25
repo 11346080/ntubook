@@ -227,7 +227,9 @@ EMAIL_PORT = env.int('EMAIL_PORT', default=587)
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
 EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@ntub.edu.tw')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='noreply@ntubook.com')
+# 通知專用寄件地址（未來 email 通知將使用此地址）
+NOTIFICATION_FROM_EMAIL = env('NOTIFICATION_FROM_EMAIL', default='noreply@ntubook.com')
 
 # ========== Media Files Configuration ==========
 MEDIA_URL = '/media/'
