@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import styles from '../style/dashboard.module.css';
 
 interface MeResponse {
@@ -112,6 +113,7 @@ export default function DashboardPage() {
   const [programTypes, setProgramTypes] = useState<ProgramType[]>([]);
   const [allClassGroups, setAllClassGroups] = useState<ClassGroup[]>([]);
   const [activeTab, setActiveTab] = useState<'profile' | 'listings' | 'favorites' | 'reservations'>('listings');
+  const [filterStatus, setFilterStatus] = useState<string>('all');  // 刊登狀態篩選器
 
   const [form, setForm] = useState({
     display_name: '',
@@ -267,6 +269,28 @@ export default function DashboardPage() {
       }
     } catch {
       // Remove favorite operation failed
+    }
+  };
+
+  // 取消預約
+  const handleCancelReservation = async (reservationId: number) => {
+    if (!window.confirm('確定要取消這筆預約嗎？')) return;
+
+    try {
+      const response = await fetch(`http://localhost:8000/api/requests/${reservationId}/`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.ok) {
+        setReservations(reservations.filter(r => r.id !== reservationId));
+      } else {
+        const errorData = await response.json();
+        setDeleteError(errorData?.error?.message || '取消預約失敗，請稍後再試');
+      }
+    } catch {
+      setDeleteError('網路錯誤，請檢查連線');
     }
   };
 
@@ -761,9 +785,9 @@ export default function DashboardPage() {
               {listings.map(listing => (
                 <div key={listing.id} className={styles.card}>
                   <div className={styles.cardImage}>
-                    {listing.images && listing.images.length > 0 ? (
+                    {listing.listing_images && listing.listing_images.length > 0 ? (
                       <img
-                        src={`http://localhost:8000${listing.images[0].file_path}`}
+                        src={`http://localhost:8000${listing.listing_images[0].file_path}`}
                         alt={listing.book.title}
                         onError={e => {
                           (e.target as HTMLImageElement).style.display = 'none';
@@ -780,32 +804,33 @@ export default function DashboardPage() {
                     <h6 className={styles.cardTitle}>{listing.book.title}</h6>
                     <p className={styles.cardAuthor}>{listing.book.author_display}</p>
 
-                    <div className={styles.cardPrice}>NT$ {listing.used_price.toLocaleString()}</div>
+                        <div className={styles.cardPrice}>NT$ {listing.used_price.toLocaleString()}</div>
 
-                    {listing.status === 'REJECTED' && listing.reject_reason && (
-                      <div className={styles.cardRejectionReason}>
-                        <strong>退回原因：</strong> {listing.reject_reason}
+                        {listing.status === 'REJECTED' && listing.reject_reason && (
+                          <div className={styles.cardRejectionReason}>
+                            <strong>退回原因：</strong> {listing.reject_reason}
+                          </div>
+                        )}
+
+                        <div style={{ fontSize: '0.85rem', color: '#999', marginTop: 'auto', paddingTop: '1rem' }}>
+                          {new Date(listing.created_at).toLocaleDateString('zh-TW')}
+                        </div>
+
+                        {listing.status === 'REJECTED' && (
+                          <div className={styles.cardActions}>
+                            <button
+                              onClick={() => handleDeleteListing(listing.id)}
+                              className={`${styles.btnDelete} ${styles.btnSmall}`}
+                            >
+                              <i className="fas fa-trash"></i> 刪除
+                            </button>
+                          </div>
+                        )}
                       </div>
-                    )}
-
-                    <div style={{ fontSize: '0.85rem', color: '#999', marginTop: 'auto', paddingTop: '1rem' }}>
-                      {new Date(listing.created_at).toLocaleDateString('zh-TW')}
                     </div>
-
-                    {listing.status === 'REJECTED' && (
-                      <div className={styles.cardActions}>
-                        <button
-                          onClick={() => handleDeleteListing(listing.id)}
-                          className={`${styles.btnDelete} ${styles.btnSmall}`}
-                        >
-                          <i className="fas fa-trash"></i> 刪除
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+                  ))}
+              </div>
+            </>
           )}
         </div>
       )}
@@ -843,7 +868,7 @@ export default function DashboardPage() {
                 </thead>
                 <tbody>
                   {favorites.map(favorite => (
-                    <tr key={favorite.id} onClick={() => favorite.listing_id && router.push(`/listings/${favorite.listing_id}`)} style={{ cursor: favorite.listing_id ? 'pointer' : 'default' }} onMouseEnter={(e) => { if (favorite.listing_id) e.currentTarget.style.backgroundColor = '#f9f9f9'; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}>
+                    <tr key={favorite.id}>
                       <td>
                         <strong style={{ color: '#9b2335' }}>{favorite.book_title}</strong>
                         {favorite.book_author && (
@@ -867,7 +892,7 @@ export default function DashboardPage() {
                       </td>
                       <td>
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleRemoveFavorite(favorite.id, favorite.book_id); }}
+                          onClick={() => handleRemoveFavorite(favorite.id, favorite.book_id)}
                           className={`${styles.btnOutline} ${styles.btnSmall}`}
                         >
                           <i className="fas fa-trash"></i> 移除
@@ -911,6 +936,7 @@ export default function DashboardPage() {
                     <th>狀態</th>
                     <th>預約時間</th>
                     {reservations.some(r => r.role) && <th>備註</th>}
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -923,6 +949,37 @@ export default function DashboardPage() {
                       <td>{getReservationStatusBadge(reservation.status)}</td>
                       <td>{new Date(reservation.created_at).toLocaleDateString('zh-TW')}</td>
                       {reservations.some(r => r.role) && <td>{reservation.buyer_message || '—'}</td>}
+                      <td>
+                        {reservation.status === 'PENDING' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelReservation(reservation.id);
+                            }}
+                            style={{
+                              padding: '0.4rem 0.8rem',
+                              border: '2px solid #9b2335',
+                              backgroundColor: 'transparent',
+                              color: '#9b2335',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.85rem',
+                              fontWeight: 'bold',
+                              transition: 'all 0.3s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              (e.target as HTMLButtonElement).style.backgroundColor = '#9b2335';
+                              (e.target as HTMLButtonElement).style.color = '#fff';
+                            }}
+                            onMouseLeave={(e) => {
+                              (e.target as HTMLButtonElement).style.backgroundColor = 'transparent';
+                              (e.target as HTMLButtonElement).style.color = '#9b2335';
+                            }}
+                          >
+                            <i className="fas fa-times"></i> 取消
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

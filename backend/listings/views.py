@@ -20,8 +20,8 @@ from .serializers import (
     ListingLatestSerializer, 
     ListingDetailSerializer,
     ListingCreateSerializer,
-    ListingImageSerializer,
-    check_sensitive_words
+    check_sensitive_words,
+    check_image_nsfw
 )
 from books.models import Book
 from core.models import ClassGroup
@@ -1013,10 +1013,11 @@ def my_listings_api(request):
                     "author_display": "作者"
                 },
                 "used_price": 350.00,
-                "status": "PENDING|AVAILABLE|RESERVED|SOLD|OFF_SHELF|REJECTED",
+                "status": "PENDING|DRAFT|AVAILABLE|RESERVED|SOLD|OFF_SHELF|REJECTED",
+                "status_display": "審核中|已上架|已售出|已退回|...",
                 "reject_reason": "...|null",
                 "listing_images": [
-                    { "file_path": "..." }
+                    { "id": 1, "image_base64": "data:image/jpeg;base64,...", "mime_type": "image/jpeg", "is_primary": true }
                 ],
                 "created_at": "ISO datetime"
             }
@@ -1030,27 +1031,23 @@ def my_listings_api(request):
         ).select_related(
             'book'
         ).prefetch_related('images').order_by('-created_at')
-
+        
         # 序列化簡化版本（用於列表顯示）
         data = []
         for listing in listings:
-            # 使用 ListingImageSerializer 序列化圖片，並附加前端需要的 file_path URL
-            images = [
-                {
-                    **ListingImageSerializer(img).data,
-                    'file_path': f'/api/listings/{listing.id}/images/{img.id}/',
-                }
-                for img in listing.images.all()
-            ]
-
+            images = list(listing.images.values('file_path'))
+            
             data.append({
                 'id': listing.id,
                 'book': {
+                    'id': listing.book.id if listing.book else None,
                     'title': listing.book.title if listing.book else '未知書籍',
                     'author_display': listing.book.author_display if listing.book else '未知作者',
                 },
                 'used_price': float(listing.used_price),
+                'condition_level': listing.condition_level,
                 'status': listing.status,
+                'status_display': status_display_map.get(listing.status, listing.status),
                 'reject_reason': listing.reject_reason,
                 'images': images,
                 'created_at': listing.created_at.isoformat(),
