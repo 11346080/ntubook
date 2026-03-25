@@ -5,7 +5,26 @@ import Image from 'next/image';
 import Link from 'next/link';
 import '@/app/style/homepage.css';
 
-// ── 水墨滴資料結構 ──────────────────────────────────────────────
+// ── 首頁搜尋 State & Types ──────────────────────────────────────
+interface HomeProgramType {
+  id: number;
+  code: string;
+  name_zh: string;
+}
+
+interface HomeDepartment {
+  id: number;
+  code: string;
+  program_type: number;
+  name_zh: string;
+}
+
+interface HomeClassGroup {
+  id: number;
+  department: number;
+  name_zh: string;
+  grade_no: number;
+}
 interface InkBlob {
   x: number;
   y: number;
@@ -143,14 +162,12 @@ interface Listing {
   book_title: string;
   book_author: string;
   cover_image_url: string | null;
-  used_price: number;
+  used_price: string;
   condition_level: string;
-  seller_display_name: string;
-  seller_department: string | null;
   created_at: string;
   primary_image: {
     id: number;
-    image_base64: string | null;  // base64 data URL (data:image/jpeg;base64,...)
+    image_base64: string | null;
     mime_type: string;
     file_name: string;
     is_primary: boolean;
@@ -275,19 +292,6 @@ function LatestListingCard({ listing }: { listing: Listing }) {
             {listing.book_author}
           </p>
 
-          {/* 賣家資訊 */}
-          <p
-            style={{
-              fontSize: '12px',
-              color: 'var(--color-muted)',
-              margin: '0 0 0.75rem 0',
-            }}
-          >
-            <i className="fas fa-user-circle me-1" style={{ color: 'var(--color-seal)' }}></i>
-            {listing.seller_display_name}
-            {listing.seller_department && ` · ${listing.seller_department}`}
-          </p>
-
           {/* 價格 & 狀況 */}
           <div
             style={{
@@ -306,7 +310,7 @@ function LatestListingCard({ listing }: { listing: Listing }) {
                 color: 'var(--color-seal)',
               }}
             >
-              $NT {listing.used_price.toLocaleString()}
+              $NT {Number(listing.used_price).toLocaleString()}
             </span>
             <span
               style={{
@@ -559,8 +563,14 @@ export default function HomePage() {
   const [showContent, setShowContent] = useState(false);
   const [introPhase, setIntroPhase] = useState<'logo' | 'expand' | 'done'>('logo');
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('');
-  const [condition, setCondition] = useState('');
+  const [programTypeId, setProgramTypeId] = useState('');
+  const [departmentId, setDepartmentId] = useState('');
+  const [gradeNo, setGradeNo] = useState('');
+
+  const [allProgramTypes, setAllProgramTypes] = useState<HomeProgramType[]>([]);
+  const [allDepartments, setAllDepartments] = useState<HomeDepartment[]>([]);
+  const [allClassGroups, setAllClassGroups] = useState<HomeClassGroup[]>([]);
+  const [filteredDepartments, setFilteredDepartments] = useState<HomeDepartment[]>([]);
 
   useEffect(() => {
     const t1 = setTimeout(() => setIntroPhase('expand'), 1600);
@@ -644,14 +654,38 @@ export default function HomePage() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // 使用 keyword 作為查詢參數
     const params = new URLSearchParams();
     if (query) params.set('keyword', query);
-    if (category) params.set('category', category);
-    if (condition) params.set('condition', condition);
-    // 導航到書籍列表頁面（/listings 是現有的頁面）
+    if (programTypeId) params.set('program_type_id', programTypeId);
+    if (departmentId) params.set('department_id', departmentId);
+    if (gradeNo) params.set('grade_no', gradeNo);
     window.location.href = params.toString() ? `/listings?${params.toString()}` : '/listings';
   };
+
+  // 載入學制/系所/年級資料
+  useEffect(() => {
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    const backendUrl = API_BASE_URL.replace('/api', '');
+    Promise.all([
+      fetch(`${backendUrl}/api/core/program-types/`).then(r => r.json()),
+      fetch(`${backendUrl}/api/core/departments/`).then(r => r.json()),
+      fetch(`${backendUrl}/api/core/class-groups/`).then(r => r.json()),
+    ]).then(([pts, depts, cgs]) => {
+      setAllProgramTypes(pts as HomeProgramType[]);
+      setAllDepartments(depts as HomeDepartment[]);
+      setAllClassGroups(cgs as HomeClassGroup[]);
+    });
+  }, []);
+
+  // 學制 → 系所連動
+  useEffect(() => {
+    if (programTypeId) {
+      setFilteredDepartments(allDepartments.filter(d => String(d.program_type) === programTypeId));
+    } else {
+      setFilteredDepartments([]);
+    }
+    setDepartmentId('');
+  }, [programTypeId, allDepartments]);
 
   return (
     <div className="homepage-body-override">
@@ -721,22 +755,18 @@ export default function HomePage() {
               <input className="ink-input" type="text" placeholder="搜尋書名、作者、ISBN…" value={query} onChange={e => setQuery(e.target.value)} />
               <button type="submit" className="search-btn">搜尋</button>
             </div>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '22px' }}>
-              <select className="ink-select" value={category} onChange={e => setCategory(e.target.value)}>
-                <option value="">全部分類</option>
-                <option value="textbook">教科書</option>
-                <option value="commerce">商學財金</option>
-                <option value="management">管理行銷</option>
-                <option value="language">語言學習</option>
-                <option value="computer">資訊電腦</option>
-                <option value="general">一般讀物</option>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '22px', flexWrap: 'wrap' }}>
+              <select className="ink-select" value={programTypeId} onChange={e => setProgramTypeId(e.target.value)}>
+                <option value="">所有學制</option>
+                {allProgramTypes.map(pt => (<option key={pt.id} value={pt.id}>{pt.name_zh}</option>))}
               </select>
-              <select className="ink-select" value={condition} onChange={e => setCondition(e.target.value)}>
-                <option value="">書況不限</option>
-                <option value="new">全新未拆</option>
-                <option value="like-new">近全新</option>
-                <option value="good">良好</option>
-                <option value="fair">普通</option>
+              <select className="ink-select" value={departmentId} onChange={e => setDepartmentId(e.target.value)} disabled={!programTypeId} style={{ opacity: programTypeId ? 1 : 0.5 }}>
+                <option value="">{programTypeId ? '所有系所' : '請先選擇學制'}</option>
+                {filteredDepartments.map(d => (<option key={d.id} value={d.id}>{d.name_zh}</option>))}
+              </select>
+              <select className="ink-select" value={gradeNo} onChange={e => setGradeNo(e.target.value)}>
+                <option value="">所有年級</option>
+                {[1, 2, 3, 4, 5].map(g => (<option key={g} value={g}>{g}年級</option>))}
               </select>
             </div>
           </form>

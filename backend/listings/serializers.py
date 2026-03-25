@@ -91,7 +91,6 @@ class ListingImageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ListingImage
-        fields = ['id', 'file_name', 'mime_type', 'is_primary', 'sort_order']
         fields = ['id', 'image_base64', 'mime_type', 'file_name', 'is_primary', 'sort_order']
     
     def get_image_base64(self, obj):
@@ -274,9 +273,9 @@ class ListingLatestSerializer(serializers.ModelSerializer):
     book_title = serializers.SerializerMethodField()
     book_author = serializers.SerializerMethodField()
     cover_image_url = serializers.SerializerMethodField()
-    seller_display_name = serializers.SerializerMethodField()
-    seller_department = serializers.SerializerMethodField()
     primary_image = serializers.SerializerMethodField()
+    # used_price: Decimal → 字串，去尾端 .00（e.g. "350" 而非 "350.00"）
+    used_price = serializers.SerializerMethodField()
 
     class Meta:
         model = Listing
@@ -287,8 +286,6 @@ class ListingLatestSerializer(serializers.ModelSerializer):
             'cover_image_url',
             'used_price',
             'condition_level',
-            'seller_display_name',
-            'seller_department',
             'created_at',
             'primary_image',
         ]
@@ -305,21 +302,12 @@ class ListingLatestSerializer(serializers.ModelSerializer):
         """安全地取得封面 URL，允許 null"""
         return obj.book.cover_image_url if obj.book else None
 
-    def get_seller_display_name(self, obj):
-        """安全地取得賣家名稱"""
-        try:
-            return obj.seller.profile.display_name if obj.seller and obj.seller.profile else '匿名賣家'
-        except:
-            return '匿名賣家'
-
-    def get_seller_department(self, obj):
-        """安全地取得賣家系所，允許 null"""
-        try:
-            if obj.seller and obj.seller.profile and obj.seller.profile.department:
-                return obj.seller.profile.department.name_zh
-            return None
-        except:
-            return None
+    def get_used_price(self, obj):
+        """將 Decimal 轉為整數字串，去尾端 .00"""
+        price = float(obj.used_price)
+        if price == int(price):
+            return str(int(price))
+        return str(price)
 
     def get_primary_image(self, obj):
         """取得首圖 / Get primary image"""
@@ -327,7 +315,6 @@ class ListingLatestSerializer(serializers.ModelSerializer):
             primary_image = obj.images.filter(is_primary=True).first()
             if primary_image:
                 return ListingImageSerializer(primary_image).data
-            # 如果沒有首圖，回傳第一張圖
             first_image = obj.images.order_by('sort_order').first()
             if first_image:
                 return ListingImageSerializer(first_image).data
@@ -346,6 +333,7 @@ class NewBookSerializer(serializers.Serializer):
     author_display = serializers.CharField(max_length=255, required=True)
     publisher = serializers.CharField(max_length=255, required=True)
     publication_date_text = serializers.CharField(max_length=50, required=False, allow_blank=True)
+    publication_year = serializers.IntegerField(required=False, allow_null=True)
 
 
 class ListingCreateSerializer(serializers.Serializer):
@@ -355,10 +343,10 @@ class ListingCreateSerializer(serializers.Serializer):
     book_id = serializers.IntegerField(required=False, allow_null=True)
     new_book = NewBookSerializer(required=False, allow_null=True)
     
-    # 刊登資訊
-    origin_academic_year = serializers.IntegerField(required=True)
-    origin_term = serializers.IntegerField(required=True, min_value=1, max_value=2)
-    origin_class_group_id = serializers.IntegerField(required=True)
+    # 刊登資訊（皆改為 optional：可由 user profile 自動帶入）
+    origin_academic_year = serializers.IntegerField(required=False)
+    origin_term = serializers.IntegerField(required=False, min_value=1, max_value=2)
+    origin_class_group_id = serializers.IntegerField(required=False)
     
     # 定價與書況
     used_price = serializers.DecimalField(max_digits=10, decimal_places=2, required=True, min_value=0)
@@ -405,7 +393,31 @@ class ListingCreateSerializer(serializers.Serializer):
                 'images': '至少需要上傳 3 張圖片'
             })
         
-        # 注意：敏感詞檢查已移至後台審查程序 (review_pending_listings)
-        # 用戶提交時直接保存為 PENDING 狀態，後台異步審查並更新狀態
-        
+        # ✨ 新增：敏感詞檢查
+        # 檢查 new_book 中的 title
+        if new_book:
+            title = new_book.get('title', '')
+            sensitive_in_title = check_sensitive_words(title)
+            if sensitive_in_title:
+                raise serializers.ValidationError({
+                    'new_book': f'用詞似有不妥，請重新斟酌筆墨...（敏感詞：{", ".join(sensitive_in_title)}）'
+                })
+
+        # 檢查 description
+        description = data.get('description', '')
+        sensitive_in_desc = check_sensitive_words(description)
+        if sensitive_in_desc:
+            raise serializers.ValidationError({
+                'description': f'用詞似有不妥，請重新斟酌筆墨...（敏感詞：{", ".join(sensitive_in_desc)}）'
+            })
+
+        # ✨ 圖片格式限制：只允許 jpg / png
+        images = data.get('images', [])
+        allowed_mime_prefixes = ('data:image/jpeg', 'data:image/png')
+        for i, img in enumerate(images, 1):
+            if not any(img.startswith(prefix) for prefix in allowed_mime_prefixes):
+                raise serializers.ValidationError({
+                    'images': f'第 {i} 張圖片格式不符，僅支援 JPG 與 PNG'
+                })
+
         return data

@@ -56,12 +56,6 @@ interface BookData {
 
 interface FormState {
   book: BookData;
-  campusId: string;
-  programTypeId: string;
-  departmentId: string;
-  classGroupId: string;
-  originAcademicYear: string;
-  originTerm: string;
   usedPrice: string;
   conditionLevel: string;
   description: string;
@@ -94,36 +88,6 @@ interface IsbnApiResponse {
   _source?: 'local' | 'external_api';
   _message?: string;
   _is_new?: boolean;
-}
-
-interface ClassGroup {
-  id: number;
-  code: string;
-  name_zh: string;
-  grade_no: number;
-  section_code: string;
-  department: number;
-  program_type: number;
-}
-
-interface Campus {
-  id: number;
-  code: string;
-  name_zh: string;
-}
-
-interface ProgramType {
-  id: number;
-  code: string;
-  name_zh: string;
-}
-
-interface Department {
-  id: number;
-  code: string;
-  name_zh: string;
-  campus?: number;
-  program_type?: number;
 }
 
 interface ProfileResponse {
@@ -166,11 +130,6 @@ export default function CreateListingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
 
-  const [campusList, setCampusList] = useState<Campus[]>([]);
-  const [programTypeList, setProgramTypeList] = useState<ProgramType[]>([]);
-  const [departmentList, setDepartmentList] = useState<Department[]>([]);
-  const [classGroups, setClassGroups] = useState<ClassGroup[]>([]);
-  const [isLoadingData, setIsLoadingData] = useState(false);
   const [userProfile, setUserProfile] = useState<ProfileResponse | null>(null);
   const [userGradeDisplay, setUserGradeDisplay] = useState<string>('');
 
@@ -185,12 +144,6 @@ export default function CreateListingPage() {
       publication_date_text: null,
       cover_image_url: null,
     },
-    campusId: '',
-    programTypeId: '',
-    departmentId: '',
-    classGroupId: '',
-    originAcademicYear: '',
-    originTerm: '1',
     usedPrice: '',
     conditionLevel: '普通',
     description: '',
@@ -202,11 +155,11 @@ export default function CreateListingPage() {
   const [isbnInput, setIsbnInput] = useState('');
   const [isbnQueryMeta, setIsbnQueryMeta] = useState<IsbnQueryMeta>({});
 
-  // 加載四級選擇數據 + 初始化 CSRF token + 获取用户信息
+  // 初始化：獲取用戶 profile（用於 academic context）
   useEffect(() => {
     const initializeAndFetchData = async () => {
-      setIsLoadingData(true);
       try {
+        // 讓後端有機會刷新 session
         await fetch(`${API_BASE_URL}/listings/`, {
           method: 'GET',
           credentials: 'include',
@@ -230,128 +183,13 @@ export default function CreateListingPage() {
             );
           }
         }
-
-        const campusRes = await fetch(`${API_BASE_URL}/core/campuses/`);
-        if (campusRes.ok) {
-          const campusData = await campusRes.json();
-          const campuses = Array.isArray(campusData) ? campusData : campusData.data || [];
-          setCampusList(campuses);
-        }
-
-        const progRes = await fetch(`${API_BASE_URL}/core/program-types/`);
-        if (progRes.ok) {
-          const progData = await progRes.json();
-          const programs = Array.isArray(progData) ? progData : progData.data || [];
-          setProgramTypeList(programs);
-        }
       } catch (error) {
         // Failed to load base data
-      } finally {
-        setIsLoadingData(false);
       }
     };
 
     initializeAndFetchData();
   }, []);
-
-  // 自動填充用戶信息
-  useEffect(() => {
-    if (!userProfile || !campusList.length || !programTypeList.length) {
-      return;
-    }
-
-    if (userProfile.program_type_id && userProfile.department_id) {
-      const loadAndAutoFill = async () => {
-        try {
-          const response = await fetch(
-            `${API_BASE_URL}/core/departments/?program_type_id=${userProfile.program_type_id}`
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-            const depts = Array.isArray(data) ? data : data.data || [];
-            setDepartmentList(depts);
-
-            const userDept = depts.find((d: Department) => d.id === userProfile.department_id);
-
-            if (userDept) {
-              let campusId = '';
-              if (userDept.campus) {
-                const campus = campusList.find(c => c.id === userDept.campus);
-                if (campus) {
-                  campusId = String(campus.id);
-                }
-              }
-
-              setFormState(prev => ({
-                ...prev,
-                campusId,
-                programTypeId: String(userProfile.program_type_id),
-                departmentId: String(userProfile.department_id),
-                classGroupId: String(userProfile.class_group_id || ''),
-              }));
-            }
-          }
-        } catch (error) {
-          // Auto-fill failed
-        }
-      };
-
-      loadAndAutoFill();
-    }
-  }, [userProfile, campusList, programTypeList]);
-
-  // 當選擇校區或學制時，加載科系列表
-  useEffect(() => {
-    if (!formState.campusId || !formState.programTypeId) {
-      setDepartmentList([]);
-      setFormState(prev => ({ ...prev, departmentId: '', classGroupId: '' }));
-      return;
-    }
-
-    const loadDepartments = async () => {
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/core/departments/?campus_id=${formState.campusId}&program_type_id=${formState.programTypeId}`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          const depts = Array.isArray(data) ? data : data.data || [];
-          setDepartmentList(depts);
-        }
-      } catch (error) {
-        // Failed to load departments
-      }
-    };
-
-    loadDepartments();
-  }, [formState.campusId, formState.programTypeId]);
-
-  // 當選擇科系時，加載班級列表
-  useEffect(() => {
-    if (!formState.departmentId) {
-      setClassGroups([]);
-      setFormState(prev => ({ ...prev, classGroupId: '' }));
-      return;
-    }
-
-    const loadClassGroups = async () => {
-      try {
-        const response = await fetch(
-          `${API_BASE_URL}/core/class-groups/?department_id=${formState.departmentId}`
-        );
-        if (response.ok) {
-          const data = await response.json();
-          const groups = Array.isArray(data) ? data : data.data || [];
-          setClassGroups(groups);
-        }
-      } catch (error) {
-        // Failed to load class groups
-      }
-    };
-
-    loadClassGroups();
-  }, [formState.departmentId]);
 
   // 清除提示訊息
   const clearMessage = useCallback(() => {
@@ -500,8 +338,9 @@ export default function CreateListingPage() {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
 
-      if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.type)) {
-        errors.push(`${file.name}: 不支援此檔案格式`);
+      // ✨ 圖片格式限制：只允許 jpg / png
+      if (!['image/jpeg', 'image/png'].includes(file.type)) {
+        errors.push(`${file.name}: 僅支援 JPG 與 PNG 格式`);
         continue;
       }
 
@@ -575,15 +414,6 @@ export default function CreateListingPage() {
     setIsCheckingImage(false);
   };
 
-  // 移除圖片
-  const handleRemoveImage = (index: number) => {
-    setFormState((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-      imagePreviews: prev.imagePreviews.filter((_, i) => i !== index),
-    }));
-  };
-
   // 拖放區域事件
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -638,7 +468,6 @@ export default function CreateListingPage() {
 
     const errors: string[] = [];
     const price = parseFloat(formState.usedPrice);
-    const year = parseInt(formState.originAcademicYear);
 
     if (!formState.book.title?.trim()) errors.push('書名');
     if (!formState.book.author?.trim()) errors.push('作者');
@@ -648,15 +477,6 @@ export default function CreateListingPage() {
       errors.push('售價（需為有效數字）');
     }
 
-    if (!formState.originAcademicYear || isNaN(year) || year <= 0) {
-      errors.push('課程年份（需為有效數字）');
-    }
-
-    if (!formState.originTerm) errors.push('學期');
-    if (!formState.campusId) errors.push('校區');
-    if (!formState.programTypeId) errors.push('學制');
-    if (!formState.departmentId) errors.push('科系');
-    if (!formState.classGroupId) errors.push('班級');
     if (formState.images.length < 3) errors.push('商品圖片（需至少 3 張）');
 
     if (errors.length > 0) {
@@ -712,18 +532,16 @@ export default function CreateListingPage() {
         }
       }
 
-      const submitData = {
+      const submitData: Record<string, unknown> = {
         new_book: {
           isbn13: isbn13,
           isbn10: isbn10,
           title: formState.book.title,
           author_display: formState.book.author,
           publisher: formState.book.publisher,
+          publication_year: formState.book.publication_year || null,
           publication_date_text: formState.book.publication_date_text || null,
         },
-        origin_academic_year: parseInt(formState.originAcademicYear),
-        origin_term: parseInt(formState.originTerm),
-        origin_class_group_id: parseInt(formState.classGroupId),
         used_price: parseFloat(formState.usedPrice),
         condition_level: mapConditionLevel(formState.conditionLevel),
         description: formState.description,
@@ -890,6 +708,41 @@ export default function CreateListingPage() {
                   }
                 />
               </div>
+
+              <div className={styles.inputField}>
+                <label className={styles.label}>書籍年份</label>
+                <input
+                  type="number"
+                  className={styles.input}
+                  placeholder="如: 2024"
+                  min="1900"
+                  max={new Date().getFullYear()}
+                  value={formState.book.publication_year ?? ''}
+                  onChange={(e) =>
+                    setFormState((prev) => ({
+                      ...prev,
+                      book: {
+                        ...prev.book,
+                        publication_year: e.target.value ? parseInt(e.target.value) : null,
+                      },
+                    }))
+                  }
+                  onInput={(e) => {
+                    setFormState((prev) => ({
+                      ...prev,
+                      book: {
+                        ...prev.book,
+                        publication_year: (e.target as HTMLInputElement).value
+                          ? parseInt((e.target as HTMLInputElement).value)
+                          : null,
+                      },
+                    }));
+                  }}
+                />
+                <div className={styles.helperText}>
+                  書籍的出版年份（ISBN 查詢後自動帶入）
+                </div>
+              </div>
             </div>
           </section>
 
@@ -946,159 +799,6 @@ export default function CreateListingPage() {
                   <option value="差">差</option>
                 </select>
               </div>
-
-              <div className={styles.inputField}>
-                <label className={`${styles.label} ${styles.labelRequired}`}>課程年份</label>
-                <input
-                  type="number"
-                  className={styles.input}
-                  placeholder="如: 2024"
-                  min="2000"
-                  max={new Date().getFullYear()}
-                  value={formState.originAcademicYear}
-                  onChange={(e) => {
-                    setFormState((prev) => ({
-                      ...prev,
-                      originAcademicYear: e.target.value,
-                    }));
-                  }}
-                  onInput={(e) => {
-                    setFormState((prev) => ({
-                      ...prev,
-                      originAcademicYear: (e.target as HTMLInputElement).value,
-                    }));
-                  }}
-                />
-              </div>
-
-              <div className={styles.inputField}>
-                <label className={`${styles.label} ${styles.labelRequired}`}>學期</label>
-                <select
-                  className={styles.select}
-                  value={formState.originTerm}
-                  onChange={(e) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      originTerm: e.target.value,
-                    }))
-                  }
-                >
-                  <option value="1">第一學期</option>
-                  <option value="2">第二學期</option>
-                </select>
-              </div>
-
-              <div className={styles.inputField}>
-                <label className={`${styles.label} ${styles.labelRequired}`}>校區</label>
-                <select
-                  className={styles.select}
-                  value={formState.campusId}
-                  onChange={(e) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      campusId: e.target.value,
-                    }))
-                  }
-                >
-                  <option value="">
-                    {isLoadingData ? '加載中...' : '請選擇校區'}
-                  </option>
-                  {campusList.map((campus) => (
-                    <option key={campus.id} value={campus.id}>
-                      {campus.name_zh}
-                    </option>
-                  ))}
-                </select>
-                <div className={styles.helperText}>
-                  選擇這本書最適合的校區位置
-                </div>
-              </div>
-
-              <div className={styles.inputField}>
-                <label className={`${styles.label} ${styles.labelRequired}`}>學制</label>
-                <select
-                  className={styles.select}
-                  value={formState.programTypeId}
-                  onChange={(e) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      programTypeId: e.target.value,
-                    }))
-                  }
-                  disabled={!formState.campusId}
-                >
-                  <option value="">
-                    {!formState.campusId ? '請先選擇校區' : '請選擇學制'}
-                  </option>
-                  {programTypeList.map((program) => (
-                    <option key={program.id} value={program.id}>
-                      {program.name_zh}
-                    </option>
-                  ))}
-                </select>
-                <div className={styles.helperText}>
-                  例如：日間部、進修部
-                </div>
-              </div>
-
-              <div className={styles.inputField}>
-                <label className={`${styles.label} ${styles.labelRequired}`}>科系</label>
-                <select
-                  className={styles.select}
-                  value={formState.departmentId}
-                  onChange={(e) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      departmentId: e.target.value,
-                    }))
-                  }
-                  disabled={!formState.campusId || !formState.programTypeId}
-                >
-                  <option value="">
-                    {!formState.campusId || !formState.programTypeId
-                      ? '請先選擇校區與學制'
-                      : departmentList.length === 0
-                      ? '無可用科系'
-                      : '請選擇科系'}
-                  </option>
-                  {departmentList.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name_zh}
-                    </option>
-                  ))}
-                </select>
-                <div className={styles.helperText}>
-                  選擇科系幫助買家了解這本書的適用範圍
-                </div>
-              </div>
-
-              <div className={styles.inputField}>
-                <label className={`${styles.label} ${styles.labelRequired}`}>年級</label>
-                <select
-                  className={styles.select}
-                  value={formState.classGroupId}
-                  onChange={(e) =>
-                    setFormState((prev) => ({
-                      ...prev,
-                      classGroupId: e.target.value,
-                    }))
-                  }
-                  disabled={!formState.departmentId}
-                >
-                  <option value="">
-                    {!formState.departmentId
-                      ? '請先選擇科系'
-                      : classGroups.length === 0
-                      ? '無可用班級'
-                      : '請選擇班級'}
-                  </option>
-                  {classGroups.map((group) => (
-                    <option key={group.id} value={group.id}>
-                      {group.name_zh}
-                    </option>
-                  ))}
-                </select>
-              </div>
             </div>
 
             <div className={styles.inputField} style={{ marginTop: '1.5rem' }}>
@@ -1150,10 +850,9 @@ export default function CreateListingPage() {
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
             >
-              <div className={styles.uploadIcon}>📸</div>
               <div className={styles.uploadText}>點擊或拖放上傳圖片</div>
               <div className={styles.uploadSubtext}>
-                支援 JPG、PNG 等格式，每張最大 10MB
+                支援 JPG、PNG 格式，每張最大 10MB，至少 3 張
               </div>
             </div>
 
@@ -1162,7 +861,7 @@ export default function CreateListingPage() {
               type="file"
               className={styles.imageInput}
               multiple
-              accept="image/*"
+              accept="image/jpeg,image/png"
               onChange={(e) => handleImageUpload(e.target.files)}
               disabled={isCheckingImage}
             />
@@ -1176,14 +875,6 @@ export default function CreateListingPage() {
                       alt={`Preview ${idx + 1}`}
                       className={styles.imagePreviewImg}
                     />
-                    <button
-                      type="button"
-                      className={styles.imageRemoveBtn}
-                      onClick={() => handleRemoveImage(idx)}
-                      title="移除此圖片"
-                    >
-                      ✕
-                    </button>
                   </div>
                 ))}
               </div>

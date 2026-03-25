@@ -20,7 +20,6 @@ from .serializers import (
     ListingLatestSerializer, 
     ListingDetailSerializer,
     ListingCreateSerializer,
-    ListingImageSerializer,
     check_sensitive_words,
     check_image_nsfw
 )
@@ -184,9 +183,10 @@ def _get_listings_response(request):
         'book',
         'seller',
         'seller__profile',
-        'origin_class_group__department'
+        'origin_class_group__department',
+        'origin_class_group__program_type',
     ).prefetch_related('images')
-    
+
     # 關鍵字搜尋
     keyword = request.GET.get('keyword', '').strip()
     if keyword:
@@ -196,31 +196,30 @@ def _get_listings_response(request):
             Q(book__isbn13__icontains=keyword) |
             Q(description__icontains=keyword)
         )
-    
-    # 進階篩選：學制
-    program_type = request.GET.get('program_type', '').strip()
-    if program_type:
-        listings = listings.filter(origin_class_group__program_type_id=program_type)
-    
-    # 進階篩選：科系
-    department = request.GET.get('department', '').strip()
-    if department:
-        listings = listings.filter(origin_class_group__department_id=department)
-    
-    # 進階篩選：年級
-    grade = request.GET.get('grade', '').strip()
-    if grade:
+
+    # 學制篩選（透過 origin_class_group → program_type）
+    program_type_id = request.GET.get('program_type_id', '').strip()
+    if program_type_id:
+        listings = listings.filter(
+            origin_class_group__program_type_id=program_type_id
+        )
+
+    # 系所篩選（透過 origin_class_group → department）
+    department_id = request.GET.get('department_id', '').strip()
+    if department_id:
+        listings = listings.filter(
+            origin_class_group__department_id=department_id
+        )
+
+    # 年級篩選（origin_class_group.grade_no 乘以 10）
+    grade_no = request.GET.get('grade_no', '').strip()
+    if grade_no:
         try:
-            grade_no = int(grade)
-            listings = listings.filter(origin_class_group__grade_no=grade_no)
-        except ValueError:
+            target_grade_db = int(grade_no) * 10
+            listings = listings.filter(origin_class_group__grade_no=target_grade_db)
+        except (ValueError, TypeError):
             pass
-    
-    # 進階篩選：班級
-    class_group = request.GET.get('class_group', '').strip()
-    if class_group:
-        listings = listings.filter(origin_class_group_id=class_group)
-    
+
     # 排序（保持原有邏輯）
     sort = request.GET.get('sort', '-created_at').strip()
     allowed_sorts = ['-created_at', 'created_at', 'used_price', '-used_price']
@@ -228,12 +227,12 @@ def _get_listings_response(request):
         listings = listings.order_by(sort)
     else:
         listings = listings.order_by('-created_at')
-    
+
     # 分頁
     paginator = ListingPagination()
     paginated_listings = paginator.paginate_queryset(listings, request)
     serializer = ListingSerializer(paginated_listings, many=True)
-    
+
     return paginator.get_paginated_response(serializer.data)
 
 
@@ -260,10 +259,10 @@ def latest_listings_api(request):
     """
     取得最新 6 筆刊登的 JSON API 端點 / Get latest 6 listings API endpoint
     用於首頁展示 / For homepage display
-    
+
     Query Parameters (可選):
     - count: 返回筆數，預設 6 (最多 20)
-    
+
     Response:
     {
         "success": true,
@@ -273,10 +272,8 @@ def latest_listings_api(request):
                 "book_title": "書名",
                 "book_author": "作者",
                 "cover_image_url": "URL",
-                "used_price": 100.00,
+                "used_price": "691",
                 "condition_level": "GOOD",
-                "seller_display_name": "賣家",
-                "seller_department": "系所",
                 "created_at": "ISO datetime",
                 "primary_image": {...}
             }
@@ -671,7 +668,15 @@ def create_listing_api(request):
                 # 如果沒有 ISBN-13，生成一個唯一的佔位符
                 if not isbn13:
                     isbn13 = f"MANUAL-{uuid.uuid4().hex[:12].upper()}"
-                
+                # 取得 publication_year（從 new_book 或解析 publication_date_text）
+                pub_year = new_book_data.get('publication_year')
+                if not pub_year:
+                    import re
+                    pd_text = new_book_data.get('publication_date_text') or ''
+                    m = re.search(r'\b(19|20)\d{2}\b', pd_text)
+                    if m:
+                        pub_year = int(m.group(0))
+
                 # 建立新書籍
                 book = Book.objects.create(
                     isbn13=isbn13,
@@ -679,6 +684,7 @@ def create_listing_api(request):
                     title=new_book_data['title'],
                     author_display=new_book_data['author_display'],
                     publisher=new_book_data['publisher'],
+                    publication_year=pub_year,
                     publication_date_text=new_book_data.get('publication_date_text'),
                     metadata_source='MANUAL',
                     metadata_status='MANUALLY_CONFIRMED'
@@ -693,9 +699,61 @@ def create_listing_api(request):
                 }
             }, status=400)
         
-        # 2. 驗證班級
+        # 2. 取得 class_group：優先取 payload，沒有則從 user profile 取得
+        origin_class_group_id = data.get('origin_class_group_id')
+        origin_academic_year = data.get('origin_academic_year')
+        origin_term = data.get('origin_term')
+
+        if not origin_class_group_id or not origin_academic_year or not origin_term:
+            # 從 user profile 自動帶入
+            try:
+                from accounts.models import UserProfile
+                profile = UserProfile.objects.select_related(
+                    'class_group', 'class_group__department', 'class_group__program_type'
+                ).get(user=request.user)
+                if not origin_class_group_id and profile.class_group:
+                    origin_class_group_id = profile.class_group.id
+                if not origin_academic_year and profile.grade_no:
+                    # grade_no 在 DB 是 (入學年 * 10 + 年級)，取 grade_no // 10 + (grade_no % 10) - 1
+                    # 但最簡單：取 current year 作為 academic year
+                    import datetime
+                    origin_academic_year = datetime.date.today().year
+                if not origin_term:
+                    import datetime
+                    month = datetime.date.today().month
+                    origin_term = 1 if month < 7 else 2
+            except Exception:
+                pass
+
+        if not origin_class_group_id:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'CLASS_GROUP_REQUIRED',
+                    'message': '請先填寫個人資料（班級），或提供 origin_class_group_id'
+                }
+            }, status=400)
+
+        if not origin_academic_year:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'ACADEMIC_YEAR_REQUIRED',
+                    'message': '無法自動推算課程年份，請提供 origin_academic_year'
+                }
+            }, status=400)
+
+        if not origin_term:
+            return Response({
+                'success': False,
+                'error': {
+                    'code': 'TERM_REQUIRED',
+                    'message': '無法自動推算學期，請提供 origin_term'
+                }
+            }, status=400)
+
         try:
-            class_group = ClassGroup.objects.get(id=data['origin_class_group_id'])
+            class_group = ClassGroup.objects.get(id=origin_class_group_id)
         except ClassGroup.DoesNotExist:
             return Response({
                 'success': False,
@@ -709,8 +767,8 @@ def create_listing_api(request):
         listing = Listing.objects.create(
             seller=request.user,
             book=book,
-            origin_academic_year=data['origin_academic_year'],
-            origin_term=data['origin_term'],
+            origin_academic_year=origin_academic_year,
+            origin_term=origin_term,
             origin_class_group=class_group,
             used_price=data['used_price'],
             condition_level=data['condition_level'],
@@ -738,30 +796,17 @@ def create_listing_api(request):
                 # 解碼 base64
                 image_data = base64.b64decode(base64_data)
                 
-                # 建立 ListingImage - 存儲檔案名稱、圖片二進制資料和 MIME 類型
-                file_name = f'listing_{listing.id}_img_{idx}.{ext}'
-                listing_image = ListingImage.objects.create(
-                    listing=listing,
-                    file_name=file_name,
-                    image_binary=image_data,
-                    mime_type=mime_type,
-                    is_primary=(idx == 1),
-                    sort_order=idx - 1
-                )
-                # 解碼 base64 為二進制
-                image_binary = base64.b64decode(base64_data)
-                file_name = f'listing_{listing.id}_img_{idx}.{ext}'
-                
                 # 直接存到數據庫（不保存到文件系統）
+                file_name = f'listing_{listing.id}_img_{idx}.{ext}'
                 listing_image = ListingImage.objects.create(
                     listing=listing,
-                    image_binary=image_binary,  # 二進制數據直接存數據庫
+                    image_binary=image_data,  # 二進制數據直接存數據庫
                     mime_type=mime_type,  # 保存 MIME type 以便前端正確顯示
                     file_name=file_name,
                     is_primary=(idx == 1),  # 第一張為主圖
                     sort_order=idx - 1
                 )
-                print(f'✓ 圖片已存入數據庫: ListingImage {listing_image.id} ({file_name}, {len(image_binary)} bytes)')
+                print(f'✓ 圖片已存入數據庫: ListingImage {listing_image.id} ({file_name}, {len(image_data)} bytes)')
                 
             except Exception as img_error:
                 print(f'圖片上傳錯誤 ({idx}): {str(img_error)}')
@@ -980,29 +1025,17 @@ def my_listings_api(request):
     }
     """
     try:
-        # 查詢當前用戶的所有刊登（包括所有狀態） - 包括待審核 (PENDING)
+        # 查詢當前用戶的所有刊登（包括所有狀態）
         listings = Listing.objects.filter(
             seller=request.user
         ).select_related(
             'book'
         ).prefetch_related('images').order_by('-created_at')
         
-        # 序列化完整版本
+        # 序列化簡化版本（用於列表顯示）
         data = []
         for listing in listings:
-            # 序列化圖片
-            images_serializer = ListingImageSerializer(listing.images.all(), many=True)
-            
-            # 狀態對應的顯示文字
-            status_display_map = {
-                'DRAFT': '草稿',
-                'PENDING': '審核中',
-                'AVAILABLE': '刊登中',
-                'RESERVED': '已保留',
-                'SOLD': '已售出',
-                'OFF_SHELF': '已下架',
-                'REJECTED': '已退回',
-            }
+            images = list(listing.images.values('file_path'))
             
             data.append({
                 'id': listing.id,
@@ -1019,13 +1052,13 @@ def my_listings_api(request):
                 'listing_images': images_serializer.data,
                 'created_at': listing.created_at.isoformat(),
             })
-        
+
         return Response({
             'success': True,
             'data': data,
             'count': len(data)
         })
-    
+
     except Exception as e:
         import traceback
         traceback.print_exc()

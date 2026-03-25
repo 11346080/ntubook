@@ -189,6 +189,12 @@
   box-shadow: 0 2px 8px rgba(155, 35, 53, 0.25);
 }
 
+/* ===== Notification Panel ===== */
+.notificationPanel {
+  position: relative;
+  display: inline-block;
+}
+
 /* ===== Auth Buttons ===== */
 .authButtons {
   display: none;

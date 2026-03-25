@@ -7,6 +7,9 @@ import FilterForm from '../components/FilterForm';
 interface SearchParams {
   keyword?: string;
   sort?: string;
+  program_type_id?: string;
+  department_id?: string;
+  grade_no?: string;
 }
 
 export default async function ListingsPage({
@@ -17,6 +20,9 @@ export default async function ListingsPage({
   const params = await searchParams;
   const keyword = params.keyword || '';
   const sort = params.sort || '-created_at';
+  const program_type_id = params.program_type_id || '';
+  const department_id = params.department_id || '';
+  const grade_no = params.grade_no || '';
 
   return (
     <div style={{ padding: '4rem 1rem 2rem 1rem' }}>
@@ -25,7 +31,7 @@ export default async function ListingsPage({
         {/* 左側篩選欄 */}
         <aside className="col-lg-3 mb-4">
           <FilterSection>
-            <FilterForm keyword={keyword} sort={sort} />
+            <FilterForm keyword={keyword} sort={sort} program_type_id={program_type_id} department_id={department_id} grade_no={grade_no} />
           </FilterSection>
         </aside>
 
@@ -43,7 +49,7 @@ export default async function ListingsPage({
           </div>
 
           <Suspense fallback={<LoadingSpinner />}>
-            <SearchResultsContent keyword={keyword} sort={sort} />
+            <SearchResultsContent keyword={keyword} sort={sort} program_type_id={program_type_id} department_id={department_id} grade_no={grade_no} />
           </Suspense>
         </main>
       </div>
