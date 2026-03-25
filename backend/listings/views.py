@@ -1,3 +1,4 @@
+from django.http import HttpResponse
 from django.views.generic import ListView, DetailView, CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.shortcuts import get_object_or_404
@@ -589,8 +590,7 @@ def create_listing_api(request):
             "title": "...",
             "author_display": "...",
             "publisher": "...",
-            "publication_date_text": "...|null",
-            "edition": "...|null"
+            "publication_date_text": "...|null"
         } or null,
         "origin_academic_year": int,
         "origin_term": 1|2,
@@ -679,7 +679,6 @@ def create_listing_api(request):
                     author_display=new_book_data['author_display'],
                     publisher=new_book_data['publisher'],
                     publication_date_text=new_book_data.get('publication_date_text'),
-                    edition=new_book_data.get('edition'),
                     metadata_source='MANUAL',
                     metadata_status='MANUALLY_CONFIRMED'
                 )
@@ -911,6 +910,46 @@ def recommended_listings_api(request):
 
 
 @api_view(['GET'])
+@permission_classes([AllowAny])
+def listing_image_api(request, listing_id, image_id):
+    """
+    讀取指定刊登的圖片 / Get listing image binary data
+    公開存取 / Public access
+    
+    URL: /api/listings/<listing_id>/images/<image_id>/
+    
+    Response (200):
+        圖片的二進制資料，Content-Type 為 image 的 MIME type
+    """
+    try:
+        image = ListingImage.objects.select_related('listing').get(
+            id=image_id,
+            listing_id=listing_id
+        )
+        
+        if not image.image_binary:
+            return Response(
+                {'success': False, 'error': {'code': 'NO_IMAGE', 'message': '圖片資料為空'}},
+                status=404
+            )
+        
+        return HttpResponse(
+            image.image_binary,
+            content_type=image.mime_type or 'image/jpeg'
+        )
+    except ListingImage.DoesNotExist:
+        return Response(
+            {'success': False, 'error': {'code': 'NOT_FOUND', 'message': '找不到圖片'}},
+            status=404
+        )
+    except Exception as e:
+        return Response(
+            {'success': False, 'error': {'code': 'ERROR', 'message': str(e)}},
+            status=400
+        )
+
+
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def my_listings_api(request):
     """
@@ -931,7 +970,7 @@ def my_listings_api(request):
                 "status": "PENDING|AVAILABLE|RESERVED|SOLD|OFF_SHELF|REJECTED",
                 "reject_reason": "...|null",
                 "listing_images": [
-                    { "id": 1, "file_name": "...", "image_base64": "data:image/jpeg;base64,..." }
+                    { "file_path": "..." }
                 ],
                 "created_at": "ISO datetime"
             }
@@ -949,9 +988,7 @@ def my_listings_api(request):
         # 序列化簡化版本（用於列表顯示）
         data = []
         for listing in listings:
-            # 使用 ListingImageSerializer 正確序列化圖片
-            from listings.serializers import ListingImageSerializer
-            images_serializer = ListingImageSerializer(listing.images.all(), many=True)
+            images = list(listing.images.values('file_path'))
             
             data.append({
                 'id': listing.id,

@@ -14,6 +14,9 @@ urlpatterns = [
     path('my-listings/', views.my_listings_api, name='api-listing-my-listings'),
     path('recommended/', views.recommended_listings_api, name='api-listing-recommended'),
     path('latest/', views.latest_listings_api, name='api-listing-latest'),
+
+    # 刊登圖片讀取 / Listing Image Serving — 具體路由，放最前
+    path('<int:listing_id>/images/<int:image_id>/', views.listing_image_api, name='api-listing-image'),
     
     # 刊登動作 / Listing Actions
     path('<int:listing_id>/requests/', views.create_purchase_request_for_listing, name='api-listing-requests'),
