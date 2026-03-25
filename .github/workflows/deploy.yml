@@ -22,8 +22,9 @@ jobs:
           username: ${{ secrets.GCP_USER }}
           key: ${{ secrets.GCP_SSH_KEY }}
           port: 22
-          debug: true
+          timeout: 60s
           command_timeout: 30m
+          debug: true
           script: |
             set -Eeuo pipefail
 
@@ -68,6 +69,8 @@ jobs:
 
             FRONTEND_CHANGED=false
             FRONTEND_DEPS_CHANGED=false
+            FRONTEND_BUILD_REQUIRED=false
+            FRONTEND_PROCESS_EXISTS=false
 
             if echo "$CHANGED_FILES" | grep -E '^frontend/' >/dev/null 2>&1; then
               FRONTEND_CHANGED=true
@@ -79,8 +82,22 @@ jobs:
               FRONTEND_DEPS_CHANGED=true
             fi
 
+            if [ ! -d "$TARGET_DIR/frontend/.next" ]; then
+              FRONTEND_BUILD_REQUIRED=true
+            fi
+
+            if [ "$FRONTEND_CHANGED" = true ]; then
+              FRONTEND_BUILD_REQUIRED=true
+            fi
+
+            if pm2 describe "$PM2_NAME" >/dev/null 2>&1; then
+              FRONTEND_PROCESS_EXISTS=true
+            fi
+
             echo "FRONTEND_CHANGED=$FRONTEND_CHANGED"
             echo "FRONTEND_DEPS_CHANGED=$FRONTEND_DEPS_CHANGED"
+            echo "FRONTEND_BUILD_REQUIRED=$FRONTEND_BUILD_REQUIRED"
+            echo "FRONTEND_PROCESS_EXISTS=$FRONTEND_PROCESS_EXISTS"
 
             echo "=== Frontend env setup ==="
             cat > "$TARGET_DIR/frontend/.env.production.local" <<'EOF'
@@ -101,11 +118,11 @@ jobs:
             date
             time "$TARGET_DIR/venv/bin/pip" install --disable-pip-version-check -r "$TARGET_DIR/requirements.txt"
 
-            echo "=== Django check / migrate / collectstatic ==="
+            echo "=== Django check / collectstatic ==="
             cd "$TARGET_DIR/backend"
             date
             time "$TARGET_DIR/venv/bin/python" manage.py check
-            time "$TARGET_DIR/venv/bin/python" manage.py migrate
+            echo "=== Skip migrate for now (DB schema is being stabilized) ==="
             time "$TARGET_DIR/venv/bin/python" manage.py collectstatic --noinput
 
             echo "=== Restart gunicorn ==="
@@ -136,36 +153,42 @@ jobs:
               sleep 2
             done
 
-            if [ "$FRONTEND_CHANGED" = true ]; then
-              echo "=== Frontend build ==="
-              cd "$TARGET_DIR/frontend"
+            echo "=== Frontend prepare ==="
+            cd "$TARGET_DIR/frontend"
 
-              if [ "$FRONTEND_DEPS_CHANGED" = true ]; then
-                echo "=== Frontend install (npm ci) ==="
-                date
-                time npm ci --prefer-offline --no-audit --progress=false 2>&1 | tee "$LOG_DIR/frontend-install.log"
-              else
-                echo "=== Skip npm ci (package.json/package-lock.json unchanged) ==="
-              fi
+            if [ "$FRONTEND_DEPS_CHANGED" = true ]; then
+              echo "=== Frontend install (npm ci) ==="
+              date
+              time npm ci --prefer-offline --no-audit --progress=false 2>&1 | tee "$LOG_DIR/frontend-install.log"
+            else
+              echo "=== Skip npm ci (package.json/package-lock.json unchanged) ==="
+            fi
 
+            if [ "$FRONTEND_BUILD_REQUIRED" = true ]; then
               echo "=== Frontend build run ==="
               date
               time npm run build 2>&1 | tee "$LOG_DIR/frontend-build.log"
+            else
+              echo "=== Skip frontend build (no frontend changes and existing build found) ==="
+            fi
 
-              echo "=== Restart Next.js with PM2 ==="
-              if pm2 describe "$PM2_NAME" >/dev/null 2>&1; then
+            echo "=== Ensure Next.js is running with PM2 ==="
+            if [ "$FRONTEND_PROCESS_EXISTS" = true ]; then
+              pm2 restart "$PM2_NAME" --update-env || {
                 pm2 delete "$PM2_NAME" || true
-              fi
-
+                pm2 start npm \
+                  --name "$PM2_NAME" \
+                  --cwd "$TARGET_DIR/frontend" \
+                  -- start -- --port "$FRONTEND_PORT"
+              }
+            else
               pm2 start npm \
                 --name "$PM2_NAME" \
                 --cwd "$TARGET_DIR/frontend" \
                 -- start -- --port "$FRONTEND_PORT"
-
-              pm2 save
-            else
-              echo "=== Skip frontend build/restart (no frontend changes detected) ==="
             fi
+
+            pm2 save
 
             echo "=== Wait for Next.js (up to 60s) ==="
             for i in $(seq 1 30); do
