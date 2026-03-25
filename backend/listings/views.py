@@ -1052,7 +1052,7 @@ def my_listings_api(request):
                 'used_price': float(listing.used_price),
                 'status': listing.status,
                 'reject_reason': listing.reject_reason,
-                'listing_images': images_serializer.data,
+                'images': images,
                 'created_at': listing.created_at.isoformat(),
             })
 
