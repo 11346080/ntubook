@@ -353,7 +353,7 @@ function RecommendedListingsSection() {
         // 呼叫推薦 API（需要登入，失敗時返回空）
         const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         const backendUrl = API_BASE_URL.replace('/api', '');
-        const response = await fetch(`${backendUrl}/api/listings/recommended/`, {
+        const response = await fetch('/backend-api/listings/recommended/', {
           credentials: 'include'  // 含入認證 Cookie
         });
         
@@ -452,7 +452,7 @@ function LatestListingsSection() {
         setLoading(true);
         const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
         const backendUrl = API_BASE_URL.replace('/api', '');
-        const response = await fetch(`${backendUrl}/api/listings/latest/`, {
+        const response = await fetch('/backend-api/listings/latest/', {
           method: 'GET',
           credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
@@ -667,9 +667,9 @@ export default function HomePage() {
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     const backendUrl = API_BASE_URL.replace('/api', '');
     Promise.all([
-      fetch(`${backendUrl}/api/core/program-types/`).then(r => r.json()),
-      fetch(`${backendUrl}/api/core/departments/`).then(r => r.json()),
-      fetch(`${backendUrl}/api/core/class-groups/`).then(r => r.json()),
+      fetch('/backend-api/core/program-types/').then(r => r.json()),
+      fetch('/backend-api/core/departments/').then(r => r.json()),
+      fetch('/backend-api/core/class-groups/').then(r => r.json()),
     ]).then(([pts, depts, cgs]) => {
       setAllProgramTypes(pts as HomeProgramType[]);
       setAllDepartments(depts as HomeDepartment[]);

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const DJANGO_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api';
+const DJANGO_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 async function djangoFetch(
   request: NextRequest,
@@ -13,7 +13,7 @@ async function djangoFetch(
     return { status: 401, body: { error: 'Unauthorized' } };
   }
 
-  const url = `${DJANGO_BASE}/accounts/profile/`;
+  const url = `${DJANGO_BASE}/api/accounts/profile/`;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'X-App-Token': appToken,

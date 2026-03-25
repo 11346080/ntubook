@@ -86,7 +86,7 @@ export default function SearchResultsContent({
       setLoading(true);
       setError(null);
       try {
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
         const params = new URLSearchParams();
         if (keyword) {
           params.append('keyword', keyword);
@@ -106,7 +106,7 @@ export default function SearchResultsContent({
         params.append('page', currentPage.toString());
         params.append('page_size', '24');
 
-        const url = `${API_BASE_URL}/listings/?${params.toString()}`;
+        const url = `/backend-api/listings/?${params.toString()}`;
         const response = await fetch(url, {
           method: 'GET',
           credentials: 'include',

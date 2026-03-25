@@ -46,9 +46,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 直接呼叫後端 ISBN 查詢 API
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
-    console.log('[ISBN Proxy] 呼叫後端, url=', `${backendUrl}/books/isbn/lookup/`);
-    const backendResponse = await fetch(`${backendUrl}/books/isbn/lookup/`, {
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+    console.log('[ISBN Proxy] 呼叫後端, url=', `${backendUrl}/api/books/isbn/lookup/`);
+    const backendResponse = await fetch(`${backendUrl}/api/books/isbn/lookup/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isbn }),

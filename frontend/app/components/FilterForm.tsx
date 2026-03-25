@@ -36,10 +36,10 @@ export default function FilterForm({
 
   // 載入學制、系所資料
   useEffect(() => {
-    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
     Promise.all([
-      fetch(`${API_BASE}/core/program-types/`).then(r => r.json()),
-      fetch(`${API_BASE}/core/departments/`).then(r => r.json()),
+      fetch('/backend-api/core/program-types/').then(r => r.json()),
+      fetch('/backend-api/core/departments/').then(r => r.json()),
     ]).then(([pts, depts]) => {
       setAllProgramTypes(pts as ProgramType[]);
       setAllDepartments(depts as Department[]);

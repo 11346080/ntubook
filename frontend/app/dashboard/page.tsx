@@ -5,8 +5,10 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import styles from '../style/dashboard.module.css';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api';
-const BACKEND_BASE = API_BASE.replace(/\/api$/, '');
+// API_BASE does NOT include /api; API calls append /api separately
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000').replace(/\/api\/?$/, '');
+// BACKEND_BASE is the same - used for image/file URLs
+const BACKEND_BASE = API_BASE;
 
 interface MeResponse {
   user_id: number;
@@ -145,7 +147,7 @@ export default function DashboardPage() {
   // 加載用戶資料及刊登
   useEffect(() => {
     // 1. Check session via /api/me
-    fetch('/api/me/')
+    fetch('/api/me')
       .then(r => {
         if (r.status === 401) {
           router.push('/login');
@@ -164,7 +166,7 @@ export default function DashboardPage() {
 
         // 2. Load profile + all stats in parallel
           Promise.all([
-          fetch('/api/accounts/profile/').then(r => r.json()),
+          fetch('/api/accounts/profile').then(r => r.json()),
           fetch('/backend-api/listings/my-listings/').then(r => r.ok ? r.json() : { data: [], count: 0 }),
           fetch('/backend-api/books/favorites/').then(r => r.ok ? r.json() : { data: [], count: 0 }),
           fetch('/backend-api/requests/my-requests/').then(r => r.ok ? r.json() : { data: [], count: 0 }),
@@ -433,7 +435,7 @@ export default function DashboardPage() {
     if (form.grade_no) body.grade_no = parseInt(form.grade_no);
 
     try {
-      const res = await fetch('/api/accounts/profile/', {
+      const res = await fetch('/api/accounts/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -768,7 +770,7 @@ export default function DashboardPage() {
                   <div className={styles.cardImage}>
                     {listing.listing_images && listing.listing_images.length > 0 ? (
                       <img
-                        src={`${BACKEND_BASE}${listing.listing_images[0].file_path}`}
+                        src={`${API_BASE}${listing.listing_images[0].file_path}`}
                         alt={listing.book.title}
                         onError={e => {
                           (e.target as HTMLImageElement).style.display = 'none';

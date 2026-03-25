@@ -165,7 +165,7 @@ export default function CreateListingPage() {
           credentials: 'include',
         });
 
-        const profileRes = await fetch('/api/accounts/profile/', {
+        const profileRes = await fetch('/api/accounts/profile', {
           method: 'GET',
           credentials: 'include',
         });

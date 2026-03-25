@@ -71,9 +71,9 @@ export default function FirstLoginPage() {
 
   const loadReferenceData = useCallback(async () => {
     const [ptRes, deptRes, cgRes] = await Promise.all([
-      fetch('http://localhost:8000/api/core/program-types/'),
-      fetch('http://localhost:8000/api/core/departments/'),
-      fetch('http://localhost:8000/api/core/class-groups/'),
+      fetch('/backend-api/core/program-types/'),
+      fetch('/backend-api/core/departments/'),
+      fetch('/backend-api/core/class-groups/'),
     ]);
     if (!ptRes.ok || !deptRes.ok || !cgRes.ok) throw new Error('Failed to load reference data');
     const [pts, depts, cgs] = await Promise.all([ptRes.json(), deptRes.json(), cgRes.json()]);
@@ -81,7 +81,7 @@ export default function FirstLoginPage() {
   }, []);
 
   const loadProfile = useCallback(async (): Promise<Profile | null> => {
-    const res = await fetch('/api/accounts/profile/', { method: 'GET', credentials: 'include' });
+    const res = await fetch('/api/accounts/profile', { method: 'GET' });
     if (res.status === 404) return null;
     if (!res.ok) throw new Error('Failed to load profile');
     return res.json() as Promise<Profile>;
@@ -197,7 +197,7 @@ export default function FirstLoginPage() {
     setSubmitting(true);
 
     try {
-      const profileRes = await fetch('/api/accounts/profile/', { method: 'GET', credentials: 'include' });
+      const profileRes = await fetch('/api/accounts/profile', { method: 'GET' });
       const profileExists = profileRes.ok && profileRes.status !== 404;
 
       const body: Record<string, unknown> = {
@@ -211,7 +211,7 @@ export default function FirstLoginPage() {
       if (form.grade_no) body.grade_no = parseInt(form.grade_no);
 
       const method = profileExists ? 'PATCH' : 'POST';
-      const res = await fetch('/api/accounts/profile/', {
+      const res = await fetch('/api/accounts/profile', {
         method,
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -230,10 +230,10 @@ export default function FirstLoginPage() {
         return;
       }
 
-      const meRes = await fetch('http://localhost:8000/api/accounts/me/', { method: 'GET', credentials: 'include' });
+      const meRes = await fetch('/api/me');
       if (meRes.ok) {
         const meData = await meRes.json();
-        if (meData.profile_completed || meData.has_profile) {
+        if (meData.has_profile) {
           router.push('/dashboard');
           return;
         }
