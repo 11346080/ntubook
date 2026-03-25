@@ -19,7 +19,8 @@ from .serializers import (
     ListingLatestSerializer, 
     ListingDetailSerializer,
     ListingCreateSerializer,
-    check_sensitive_words
+    check_sensitive_words,
+    check_image_nsfw
 )
 from books.models import Book
 from core.models import ClassGroup
@@ -29,7 +30,7 @@ from core.models import ClassGroup
 
 def async_review_listing(listing_id):
     """
-    後台異步審查刊登：執行敏感詞檢查
+    後台異步審查刊登：執行敏感詞檢查和圖片 NSFW 檢查
     如果審查通過，更新 status 為 AVAILABLE
     如果審查失敗，設置 status 為 REJECTED，並記錄原因
     
@@ -38,7 +39,7 @@ def async_review_listing(listing_id):
     try:
         listing = Listing.objects.get(id=listing_id)
         
-        # 敏感詞檢查
+        # 1. 敏感詞檢查
         title_sensitive = check_sensitive_words(listing.book.title if listing.book else '')
         desc_sensitive = check_sensitive_words(listing.description or '')
         
@@ -50,11 +51,23 @@ def async_review_listing(listing_id):
             listing.reject_reason = f'用詞似有不妥，請重新斟酌筆墨...（敏感詞：{", ".join(sensitive_words)}）'
             listing.save()
             print(f'[REVIEW FAILED] Listing {listing_id}: {listing.reject_reason}')
-        else:
-            # 審查通過：設置為 AVAILABLE
-            listing.status = Listing.Status.AVAILABLE
-            listing.save()
-            print(f'[REVIEW PASSED] Listing {listing_id}: Approved and published')
+            return
+        
+        # 2. 圖片 NSFW 檢查
+        images = listing.images.all()
+        for image in images:
+            if image.image_binary and check_image_nsfw(image.image_binary):
+                # 圖片被判定為 NSFW，拒絕此刊登
+                listing.status = Listing.Status.REJECTED
+                listing.reject_reason = f'圖片內容不符合平台政策，請重新上傳合適的圖片'
+                listing.save()
+                print(f'[REVIEW FAILED] Listing {listing_id}: Image NSFW check failed')
+                return
+        
+        # 3. 審查通過：設置為 AVAILABLE
+        listing.status = Listing.Status.AVAILABLE
+        listing.save()
+        print(f'[REVIEW PASSED] Listing {listing_id}: Approved and published')
     
     except Listing.DoesNotExist:
         print(f'[ERROR] Listing {listing_id} not found')
@@ -181,6 +194,30 @@ def _get_listings_response(request):
             Q(book__isbn13__icontains=keyword) |
             Q(description__icontains=keyword)
         )
+    
+    # 進階篩選：學制
+    program_type = request.GET.get('program_type', '').strip()
+    if program_type:
+        listings = listings.filter(origin_class_group__program_type_id=program_type)
+    
+    # 進階篩選：科系
+    department = request.GET.get('department', '').strip()
+    if department:
+        listings = listings.filter(origin_class_group__department_id=department)
+    
+    # 進階篩選：年級
+    grade = request.GET.get('grade', '').strip()
+    if grade:
+        try:
+            grade_no = int(grade)
+            listings = listings.filter(origin_class_group__grade_no=grade_no)
+        except ValueError:
+            pass
+    
+    # 進階篩選：班級
+    class_group = request.GET.get('class_group', '').strip()
+    if class_group:
+        listings = listings.filter(origin_class_group_id=class_group)
     
     # 排序（保持原有邏輯）
     sort = request.GET.get('sort', '-created_at').strip()
@@ -734,19 +771,14 @@ def create_listing_api(request):
         # 5. 序列化回傳
         output_serializer = ListingDetailSerializer(listing)
         
-        # 6. 觸發後台異步審查任務 (敏感詞 + 圖片審查)
-        import threading
-        review_thread = threading.Thread(
-            target=async_review_listing,
-            args=(listing.id,),
-            daemon=True
-        )
-        review_thread.start()
+        # ⚠️ 不在此處進行任何 AI 審查
+        # AI 審查已脫鉤至後台獨立批次處理程式 (management command)
+        # Web API 只負責快速接收資料、儲存至資料庫，立即回傳
         
         return Response({
             'success': True,
             'data': output_serializer.data,
-            'message': '書卷已遞交，小二正在為您審核，請稍候...'
+            'message': '書卷已遞交至藏經閣，審核官正在審閱中...'
         }, status=201)
     
     except json.JSONDecodeError:
@@ -836,6 +868,7 @@ def recommended_listings_api(request):
         
         # 查詢：來自相同班級、高一年級、已發佈的刊登
         # 使用 ClassGroup 的 grade_no 欄位來篩選
+        # 絕對排除自己的書籍
         from core.models import ClassGroup as CG
         
         target_class_groups = CG.objects.filter(
@@ -848,6 +881,8 @@ def recommended_listings_api(request):
             origin_class_group_id__in=target_class_groups,
             status=Listing.Status.AVAILABLE,
             deleted_at__isnull=True
+        ).exclude(
+            seller=request.user  # 絕對不推薦自己刊登的書
         ).select_related(
             'book',
             'seller',
@@ -896,7 +931,7 @@ def my_listings_api(request):
                 "status": "PENDING|AVAILABLE|RESERVED|SOLD|OFF_SHELF|REJECTED",
                 "reject_reason": "...|null",
                 "listing_images": [
-                    { "file_path": "..." }
+                    { "id": 1, "file_name": "...", "image_base64": "data:image/jpeg;base64,..." }
                 ],
                 "created_at": "ISO datetime"
             }
@@ -904,7 +939,7 @@ def my_listings_api(request):
     }
     """
     try:
-        # 查詢當前用戶的所有刊登（包括已刪除的）
+        # 查詢當前用戶的所有刊登（包括所有狀態） - 包括待審核 (PENDING)
         listings = Listing.objects.filter(
             seller=request.user
         ).select_related(
@@ -914,7 +949,9 @@ def my_listings_api(request):
         # 序列化簡化版本（用於列表顯示）
         data = []
         for listing in listings:
-            images = list(listing.images.values('file_path'))
+            # 使用 ListingImageSerializer 正確序列化圖片
+            from listings.serializers import ListingImageSerializer
+            images_serializer = ListingImageSerializer(listing.images.all(), many=True)
             
             data.append({
                 'id': listing.id,
@@ -925,7 +962,7 @@ def my_listings_api(request):
                 'used_price': float(listing.used_price),
                 'status': listing.status,
                 'reject_reason': listing.reject_reason,
-                'listing_images': images,
+                'listing_images': images_serializer.data,
                 'created_at': listing.created_at.isoformat(),
             })
         
@@ -936,6 +973,8 @@ def my_listings_api(request):
         })
     
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return Response({
             'success': False,
             'error': {
