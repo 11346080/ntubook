@@ -101,7 +101,8 @@ jobs:
 
             echo "=== Frontend env setup ==="
             cat > "$TARGET_DIR/frontend/.env.production.local" <<'EOF'
-            NEXT_PUBLIC_API_URL=https://test.ntubook.com
+            NEXT_PUBLIC_API_URL=https://test.ntubook.com/api
+            NEXTAUTH_URL=https://test.ntubook.com
             EOF
 
             echo "=== Backend env check ==="

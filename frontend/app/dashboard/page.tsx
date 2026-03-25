@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import styles from '../style/dashboard.module.css';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api';
+const BACKEND_BASE = API_BASE.replace(/\/api$/, '');
+
 interface MeResponse {
   user_id: number;
   email: string;
@@ -160,23 +163,11 @@ export default function DashboardPage() {
         }
 
         // 2. Load profile + all stats in parallel
-        Promise.all([
-          fetch('http://localhost:3000/api/accounts/profile/').then(r => r.json()),
-          fetch('http://localhost:8000/api/listings/my-listings/', {
-            method: 'GET',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-          }).then(r => r.ok ? r.json() : { data: [], count: 0 }),
-          fetch('http://localhost:8000/api/books/favorites/', {
-            method: 'GET',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-          }).then(r => r.ok ? r.json() : { data: [], count: 0 }),
-          fetch('http://localhost:8000/api/requests/my-requests/', {
-            method: 'GET',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-          }).then(r => r.ok ? r.json() : { data: [], count: 0 }),
+          Promise.all([
+          fetch('/api/accounts/profile/').then(r => r.json()),
+          fetch('/backend-api/listings/my-listings/').then(r => r.ok ? r.json() : { data: [], count: 0 }),
+          fetch('/backend-api/books/favorites/').then(r => r.ok ? r.json() : { data: [], count: 0 }),
+          fetch('/backend-api/requests/my-requests/').then(r => r.ok ? r.json() : { data: [], count: 0 }),
         ]).then(([p, listingsResp, favoritesResp, reservationsResp]) => {
           setProfile(p);
           setForm({
@@ -224,9 +215,9 @@ export default function DashboardPage() {
 
     // 3. Load reference data
     Promise.all([
-      fetch('http://localhost:8000/api/core/program-types/').then(r => r.json()),
-      fetch('http://localhost:8000/api/core/departments/').then(r => r.json()),
-      fetch('http://localhost:8000/api/core/class-groups/').then(r => r.json()),
+      fetch('/backend-api/core/program-types/').then(r => r.json()),
+      fetch('/backend-api/core/departments/').then(r => r.json()),
+      fetch('/backend-api/core/class-groups/').then(r => r.json()),
     ]).then(([pt, dept, cg]) => {
       setProgramTypes(pt);
       setDepartments(dept);
@@ -242,7 +233,7 @@ export default function DashboardPage() {
 
     setDeleteError(null);
     try {
-      const response = await fetch(`http://localhost:8000/api/listings/${listingId}/`, {
+      const response = await fetch(`/backend-api/listings/${listingId}/`, {
         method: 'DELETE',
       });
 
@@ -260,7 +251,7 @@ export default function DashboardPage() {
   // 取消收藏
   const handleRemoveFavorite = async (favoriteId: number, bookId: number) => {
     try {
-      const response = await fetch(`http://localhost:8000/api/books/${bookId}/favorite/`, {
+      const response = await fetch(`/backend-api/books/${bookId}/favorite/`, {
         method: 'DELETE',
       });
 
@@ -277,10 +268,8 @@ export default function DashboardPage() {
     if (!window.confirm('確定要取消這筆預約嗎？')) return;
 
     try {
-      const response = await fetch(`http://localhost:8000/api/requests/${reservationId}/`, {
+      const response = await fetch(`/backend-api/requests/${reservationId}/`, {
         method: 'DELETE',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
       });
 
       if (response.ok) {
@@ -303,11 +292,7 @@ export default function DashboardPage() {
         loadedTabs.current.add('listings');
         setLoadingListings(true);
         try {
-          const response = await fetch('http://localhost:8000/api/listings/my-listings/', {
-            method: 'GET',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-          });
+          const response = await fetch('/backend-api/listings/my-listings/');
           if (response.ok) {
             const data = await response.json();
             setListings(Array.isArray(data) ? data : data.results || data.data || data.listings || []);
@@ -322,11 +307,7 @@ export default function DashboardPage() {
         loadedTabs.current.add('favorites');
         setLoadingFavorites(true);
         try {
-          const response = await fetch('http://localhost:8000/api/books/favorites/', {
-            method: 'GET',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-          });
+          const response = await fetch('/backend-api/books/favorites/');
           if (response.ok) {
             const data = await response.json();
             // Flatten favorites: { data: [{ book: {...}, listing: {...}, ... }] }
@@ -352,7 +333,7 @@ export default function DashboardPage() {
         loadedTabs.current.add('reservations');
         setLoadingReservations(true);
         try {
-          const url = 'http://localhost:8000/api/requests/my-requests/';
+          const url = '/backend-api/requests/my-requests/';
           
           const response = await fetch(url, {
             method: 'GET',
@@ -787,7 +768,7 @@ export default function DashboardPage() {
                   <div className={styles.cardImage}>
                     {listing.listing_images && listing.listing_images.length > 0 ? (
                       <img
-                        src={`http://localhost:8000${listing.listing_images[0].file_path}`}
+                        src={`${BACKEND_BASE}${listing.listing_images[0].file_path}`}
                         alt={listing.book.title}
                         onError={e => {
                           (e.target as HTMLImageElement).style.display = 'none';

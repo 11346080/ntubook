@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { signIn } from 'next-auth/react';
 import { useState, ChangeEvent, FormEvent } from 'react';
 
 export default function LoginPage() {
@@ -54,7 +55,7 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
-    // TODO: 實作 Google OAuth 登入
+    signIn('google', { callbackUrl: '/auth/post-login' });
   };
 
   return (

@@ -39,6 +39,15 @@ const nextConfig: NextConfig = {
       ],
     };
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'test.ntubook.com',
+        pathname: '/media/**',
+      },
+    ],
+  },
   /* config options here */
 };
 
