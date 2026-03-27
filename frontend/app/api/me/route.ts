@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export async function GET(request: NextRequest) {
-  const djangoApiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+  const djangoApiBase = (process.env.INTERNAL_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000').replace(/\/api\/?$/, '');
   const fetchUrl = `${djangoApiBase}/api/accounts/me/`;
 
   const appToken = request.cookies.get('app_token')?.value;

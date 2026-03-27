@@ -4,7 +4,7 @@ import { auth } from '@/auth';
 export async function GET() {
   const frontendBase = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
   // NOTE: NEXT_PUBLIC_API_URL must NOT include /api (e.g. https://test.ntubook.com)
-  const djangoApiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+  const djangoApiBase = (process.env.INTERNAL_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000').replace(/\/api\/?$/, '');
 
   // 1. Get authenticated session (NextAuth JWT)
   const session = await auth();

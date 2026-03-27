@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const DJANGO_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+const DJANGO_BASE = (process.env.INTERNAL_API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000').replace(/\/api\/?$/, '');
 
 async function djangoFetch(
   request: NextRequest,
